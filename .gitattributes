@@ -1,0 +1,2 @@
+resources/example.arrow filter=lfs diff=lfs merge=lfs -text
+resources/example.skyhook filter=lfs diff=lfs merge=lfs -text
