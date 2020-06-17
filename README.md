@@ -1,8 +1,8 @@
 # Overview
 
-This repository is for the python package skyhookdm-py. This package contains a python interface
-for [SkyhookDM][project-skyhook], a data management layer over the [Ceph][project-ceph] object
-storage system.
+This repository is for the python package skyhookdm-py. This package contains the beginnings of a
+python interface for [SkyhookDM][project-skyhook], a tabular data management in the
+[Ceph][project-ceph] object storage system.
 
 The python library is simply `skyhookdm`, and the source code is available in the aptly named
 directory.
