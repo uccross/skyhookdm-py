@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+
+import os
+
+import pyarrow
+
+from collections import OrderedDict
+
+# Modules
+# from skyhookdm import skyhook
+
+# Classes
+# from skyhookdm.connectors import RadosConnector
+from skyhookdm.dataformats import SkyhookFileReader, SkyhookFlatbufferMeta  # , SkyhookDataWrapper
+
+# Functions
+from skyhookdm.dataformats import arrow_binary_from_table
+
+
+# Constants for this example
+example_ceph_config_filepath = os.path.join('resources', 'ceph.config')
+
+example_filepath  = os.path.join('resources', 'example.arrow')
+example_pool      = 'example-pool-skyhook'
+example_table     = 'example-table'
+example_batchsize = 100
+
+column_name_dataschema = 'data_schema'.encode('utf-8')
+column_name_numrows    = 'num_rows'.encode('utf-8')
+
+
+def modified_metadata(datatable, partition_start, partition_end):
+    partition_metadata = OrderedDict(datatable.schema.metadata)
+
+    data_schema_partition = (
+        datatable.schema
+                 .metadata
+                 .get(column_name_dataschema, ''.encode('utf-8'))
+                 .decode('utf-8')
+                 .split(';')[partition_start:partition_end]
+    )
+
+    partition_metadata[column_name_dataschema] = ';'.join(data_schema_partition).encode('utf-8')
+    partition_metadata[column_name_numrows]    = len(tbl_partition).to_bytes(4, byteorder='little')
+
+    return partition_metadata
+
+
+# ------------------------------
+# Main Logic
+if __name__ == '__main__':
+
+    # Initialize the cluster handle
+    # cluster = RadosConnector.connection_for_config(path_to_config=example_ceph_config_filepath)
+
+    # Activate the connection
+    # cluster.connect()
+    # print(f'Connection Information >>>\n{cluster.cluster_info()}\n<<<\n')
+
+    # Read input data
+    source_datatable = SkyhookFileReader.read_data_file_as_arrow_table(example_filepath)
+
+    # partition table if it has more columns than the desired batch size
+    for partition_start in range(0, source_datatable.num_columns, example_batchsize):
+        partition_end = partition_start + example_batchsize
+
+        tbl_partition    = source_datatable.columns[partition_start:partition_end]
+        partition_schema = pyarrow.schema(
+            fields=[
+                source_datatable.schema.field(field_ndx)
+                for field_ndx in range(partition_start, partition_end)
+            ],
+            metadata=modified_metadata(source_datatable, partition_start, partition_end)
+        )
+
+        # Convert from source data (arrow recordbatch) to skyhook (flatbuffer wrapper)
+        binary_data = SkyhookFlatbufferMeta.binary_from_arrow_binary(
+            arrow_binary_from_table(
+                pyarrow.Table.from_arrays(tbl_partition, schema=partition_schema)
+            )
+        )
+
+        # Get an ioctx for a pool and write the data
+        binary_data_len = len(binary_data).to_bytes(4, byteorder='little')
+
+        with open(os.path.join(example_filepath, 'partition.arrow'), 'wb') as output_handle:
+            output_handle.write(binary_data_len + binary_data)
+
+        # with cluster.context_for_pool(example_pool) as pool_context:
+        #     pool_context.write_data(
+        #         storage_obj_name=f'public.{example_table}.0',
+        #         storage_obj_data=(binary_data_len + binary_data)
+        #     )

@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+
+import os
+import sys
+
+from skyhookdm.dataformats import SkyhookFileReader
+
+example_filepath = os.path.join('resources', 'example.arrow')
+
+# A straightforward validation
+if not os.path.isfile(example_filepath):
+    sys.exit(f'Could not find file: {example_filepath}')
+
+data_table = SkyhookFileReader.read_data_file_as_arrow_table(example_filepath)
+
+# Print the schema of the arrow table. *Includes* metadata for skyhook
+print(data_table.schema)
+
+# Print the data using the to_pandas() function, because dataframes print pretty
+print(data_table.to_pandas())

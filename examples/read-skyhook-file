@@ -1,0 +1,33 @@
+#!/usr/bin/env python
+
+import os
+import sys
+
+from skyhookdm.skyhook import FormatTypes
+from skyhookdm.dataformats import SkyhookFileReader
+
+
+# hardcoded example file
+example_filepath = os.path.join('resources', 'example.skyhook')
+
+
+# Main code
+if not os.path.isfile(example_filepath):
+    sys.exit(f'Could not find file: {example_filepath}')
+
+# Let SkyhookFileReader parse the skyhook file
+data_size, skyhook_flatbuffer = SkyhookFileReader.read_skyhook_file(example_filepath)
+
+# This is how we check the data format
+if not skyhook_flatbuffer.get_data_format() == FormatTypes.SFT_ARROW:
+    readable_format = FormatTypes.from_value(skyhook_flatbuffer.get_data_format())
+    sys.exit(f'Data format, "{readable_format}" not supported')
+
+# This data size should be 4 bytes less than the file size (first 4 bytes are the data size)
+print(f'Data Size: {data_size}')
+
+# Now we just read the data and pretty print it using pandas
+data_table = skyhook_flatbuffer.get_data_as_arrow()
+
+print(data_table.schema)
+print(data_table.to_pandas())

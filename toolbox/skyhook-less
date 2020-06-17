@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import logging
+
+from skyhookdm.util import ArgparseBuilder
+from skyhookdm.skyhook import FormatTypes
+from skyhookdm.dataformats import SkyhookFileReader
+
+# ------------------------------
+# Parse command-line arguments first
+parsed_args, parsed_extra_args = (
+    ArgparseBuilder.with_description('Utility to parse binary skyhook files (flatbuffer)')
+                   .add_input_file_arg(
+                         required=True
+                        ,help_str='Path to arrow file (assumed to be gene expression)'
+                    )
+                   .parse_args()
+)
+
+# Bootstrap logger
+logger = logging.getLogger('toolbox.skyhook-less')
+logger.addHandler(logging.StreamHandler(sys.stdout))
+logger.setLevel(logging.INFO)
+
+# ------------------------------
+if __name__ == '__main__':
+    if not os.path.isfile(parsed_args.input_file):
+        sys.exit(f'Could not find file: {parsed_args.input_file}')
+
+    data_size, skyhook_flatbuffer = SkyhookFileReader.read_skyhook_file(parsed_args.input_file)
+
+    print(f'Data Size: {data_size}')
+
+    data_table = None
+    if skyhook_flatbuffer.get_data_format() == FormatTypes.SFT_ARROW:
+        data_table = skyhook_flatbuffer.get_data_as_arrow()
+
+    else:
+        readable_format = FormatTypes.from_value(skyhook_flatbuffer.get_data_format())
+        err_msg         = f'Data format, "{readable_format}" not yet supported'
+
+        print(err_msg)
+        sys.exit(err_msg)
+
+    print(data_table.schema)
+    print(data_table.to_pandas())
+    print(len(data_table.schema.metadata['data_schema'.encode('utf-8')]))

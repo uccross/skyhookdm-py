@@ -1,0 +1,128 @@
+#!/usr/bin/env python
+
+import sys
+import subprocess
+import logging
+import itertools
+
+import pyarrow
+
+from skyhookdm_singlecell import skyhook
+from skyhookdm_singlecell.util import ArgparseBuilder
+from skyhookdm_singlecell.dataformats import arrow_batches_from_binary
+
+
+# ------------------------------
+# Parse command-line arguments first
+parsed_args, parsed_extra_args = (
+    ArgparseBuilder.with_description("Thin wrapper around SkyhookDM's run-query binary")
+                   .add_skyhook_query_bin_args(required=False)
+                   .add_skyhook_obj_slice_args(required=True)
+                   .add_ceph_pool_arg(required=True)
+                   .add_skyhook_table_arg(required=True)
+                   .add_metadata_target_arg(
+                         required=False
+                        ,help_str='Metadata to query *instead of* table data: <cells | genes>'
+                    )
+                   .parse_args()
+)
+
+
+# Bootstrap logger
+logger = logging.getLogger('toolbox.run-query')
+logger.addHandler(logging.StreamHandler(sys.stdout))
+logger.setLevel(logging.INFO)
+
+
+def construct_query_str():
+    """
+    Convenience function to construct the run-query command string. This assumes access to
+    global-scope CLI arguments.
+    """
+
+    command_args = [
+        parsed_args.path_to_query_bin,
+
+        '--start-obj'    , parsed_args.start_obj             ,
+        '--num-objs'     , parsed_args.num_objs              ,
+        '--oid-prefix'   , 'public'                          ,
+        '--pool'         , parsed_args.ceph_pool             ,
+        '--table-name'   , parsed_args.skyhook_table         ,
+        '--result-format', str(skyhook.FormatTypes.SFT_ARROW),
+        '--output-format', 'SFT_PYARROW_BINARY'              ,
+    ]
+
+    metadata_opt = []
+    if parsed_args.metadata_target == 'cells':   metadata_opt = ['--cell-metadata']
+    elif parsed_args.metadata_target == 'genes': metadata_opt = ['--gene-metadata']
+
+    return command_args + metadata_opt
+
+
+def exec_run_query(query_command_args):
+    """
+    Convenience function to call the run-query binary and handle output.
+    """
+
+    print(f'Executing command: "{query_command_args}"')
+
+    cmd_completion = subprocess.run(query_command_args, check=True, stdout=subprocess.PIPE)
+
+    byte_ndx_blob   = 0
+    binary_response = cmd_completion.stdout
+
+    with open('test.binary', 'wb') as output_handle:
+        output_handle.write(binary_response)
+
+    schema_cumulative  = None
+    batches_cumulative = None
+
+    # iterate over each partition in the output
+    iter_ndx = 0
+    while byte_ndx_blob < len(binary_response):
+        # first, peel the blob size
+        byte_ndx_size = byte_ndx_blob + 8
+        data_size = int.from_bytes(
+            binary_response[byte_ndx_blob:byte_ndx_size],
+            byteorder='little'
+        )
+
+        # then, parse the binary into arrow record batches and a schema
+        byte_ndx_blob_end = byte_ndx_size + data_size
+
+        partition_schema, partition_batches = arrow_batches_from_binary(
+            binary_response[byte_ndx_size:byte_ndx_blob_end]
+        )
+
+        # set our initial accumulators
+        if batches_cumulative is None:
+            batches_cumulative = partition_batches
+            schema_cumulative  = partition_schema
+
+        # otherwise, accumulate
+        else:
+            batches_cumulative.extend(partition_batches)
+
+            # TODO there is probably a more efficient way to do this?
+            for partition_field in partition_schema:
+                schema_cumulative = schema_cumulative.append(partition_field)
+
+        # move our index in the output forward
+        byte_ndx_blob = byte_ndx_blob_end
+        iter_ndx     += 1
+
+    # construct the overall arrow table
+    result_table = pyarrow.Table.from_arrays(
+        list(itertools.chain.from_iterable([
+            partition_batch.columns
+            for partition_batch in batches_cumulative
+        ])),
+        schema=schema_cumulative
+    )
+    print(result_table.schema)
+    print(result_table.to_pandas())
+
+
+# ------------------------------
+if __name__ == '__main__':
+    exec_run_query(construct_query_str())
