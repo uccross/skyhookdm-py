@@ -1,0 +1,129 @@
+#!/usr/bin/env python
+"""
+This is a very high-level sketch of what we might want the interface for the lifetime of a query to
+look like. This is a work in progress, and not necessarily an interface to a user, but to the
+library internals.
+"""
+
+import subprocess
+
+import skyhook
+
+
+class QueryParser(object):
+    """
+    A class that would be defined in another module, that consolidates logic for parsing queries.
+    """
+
+    @classmethod
+    def parse(cls, query_string):
+        """
+        A function that takes a query_string and returns a dictionary, where keys are options to
+        the run-query binary.
+
+        NOTE: this is "part 1" of query processing--convert from a string to a semantic
+        representation.
+        """
+
+        return {
+            'projection': '',
+            'relations' : '',
+            'predicates': '',
+            'aggregates': '',
+        }
+
+
+class QueryPlanner(object):
+    """
+    A class that would be defined in another module, that consolidates logic for defining arguments
+    for the run-query binary from the given query representation (implementation can be
+    class-specific).
+    """
+
+    @classmethod
+    def plan(query_representation, query_options={}):
+        """
+        A function that takes some representation and options and returns a list of arguments for
+        the run-query binary.
+
+        The below code is a small sample that assumes query_representation is a dict.
+        """
+
+        # variables for coalescing query string into other arguments
+        projection_attrs  = []
+
+        # process attributes specified in select clause
+        if query_representation.get('projection'):
+            for project_attr in query_representation.get('projection'):
+                projection_attrs.append(project_attr)
+
+        # process attributes specified in from clause
+        if query_options.skyhook_table:
+            relation_list = [query_options.skyhook_table]
+
+        elif query_representation.get('relations'):
+            relation_list = query_representation.get('relations')
+
+        # yield a sequence of argument lists, where each argument list is for a query
+        for relation in relation_list:
+            # construct query args from command-line args
+            command_args = [
+                query_options.path_to_query_bin,
+
+                '--start-obj'    , query_options.start_obj           ,
+                '--num-objs'     , query_options.num_objs            ,
+                '--oid-prefix'   , 'public'                          ,
+                '--pool'         , query_options.ceph_pool           ,
+                '--table-name'   , relation                          ,
+                '--result-format', str(skyhook.FormatTypes.SFT_ARROW),
+                '--output-format', 'SFT_PYARROW_BINARY'              ,
+            ]
+
+            # add arguments that may have been specified
+            if projection_attrs:
+                command_args += ['--project', ','.join(projection_attrs)]
+
+            yield command_args
+
+
+class QueryEngine(object):
+
+    @classmethod
+    def execute(query_args):
+        """
+        Invokes the query engine (run-query binary) with the query plan (the query_args parameter)
+        and returns the raw output (aka the "internal representation").
+        """
+
+        return subprocess.run(query_args, check=True, stdout=subprocess.PIPE).stdout
+
+
+def parse_query_result(input_as_binary):
+    """ Some function that takes binary data and returns a desired representation. """
+
+    return None, None  # data_representation, data_schema
+
+
+# ------------------------------
+# The overall lifetime of a query
+def query_lifetime(query_str):
+    """
+    Function that illustrates how to take a query from a string all the way to execution.
+    """
+
+    # Query Lifetime part 1: parse query string
+    query_representation   = QueryParser.parse(query_str)
+
+    # Query Lifetime part 2: convert semantic representation to plan for query engine
+    # In the short term, this is just a mapping of SQL clauses ('select', 'from', etc.) to
+    # arguments for run-query binary
+    arguments_for_runquery = QueryPlanner.plan(query_representation)
+
+    # Query Lifetime part 3: pass query plan to query engine to be executed
+    # In the short term, the query engine is just the run-query binary
+    raw_query_results      = QueryEngine.execute(arguments_for_runquery)
+
+    # Not part of the query lifetime, but here we show how query results might be interpreted
+    interpreted_results    = parse_query_result(raw_query_results)
+
+    return interpreted_results
