@@ -26,7 +26,7 @@ deprecate features or break backwards compatibility. While this isn't going to b
 every update, minor version updates should still be tested before transitioning to them.
 
 Python version management is handled by [pyenv][tool-pyenv]. The main purpose is simply to make it
-easy to isolate potentiall differences between python versions, but there is a secondary, very
+easy to isolate potential differences between python versions, but there is a secondary, very
 important reason for needing to explicitly manage the python version: compatibility with the
 `rados` library.  The storage subsystem used by Ceph is called [RADOS][article-rados], and the
 [python rados library][docs-libradospy] is a binding to the librados code. As of this writing, the
