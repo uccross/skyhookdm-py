@@ -3,9 +3,9 @@ import os
 import sys
 import time 
 
-from skyhookdm.skyhooksql.query import Query
-from skyhookdm.skyhooksql.skyhook import SkyhookRunner
-from skyhookdm.skyhooksql.parser import SQLParser
+from skyhookdm.sql.query import Query
+from skyhookdm.sql.skyhook import SkyhookRunner
+from skyhookdm.sql.parser import SQLParser
 
 #### Options for test validation ####
 sk_runner = SkyhookRunner()
@@ -15,7 +15,7 @@ options_default = {'cls'            : True,
                 'pool'             : 'tpchdata',
                 'num-objs'         : '2',
                 'oid-prefix'       : '\"public\"',
-                'path_to_run_query': sk_runner.default_path}
+                'path_to_run_query': 'cd ~/skyhookdm-ceph/build/ && bin/run-query'}
 
 options_quiet = {'cls'              : True,
                 'quiet'            : True,
@@ -23,7 +23,7 @@ options_quiet = {'cls'              : True,
                 'pool'             : 'tpchdata',
                 'num-objs'         : '2',
                 'oid-prefix'       : '\"public\"',
-                'path_to_run_query': sk_runner.default_path}
+                'path_to_run_query': 'cd ~/skyhookdm-ceph/build/ && bin/run-query'}
 
 options_no_cls = {'cls'             : False,
                 'quiet'            : False,
@@ -31,7 +31,7 @@ options_no_cls = {'cls'             : False,
                 'pool'             : 'tpchdata',
                 'num-objs'         : '2',
                 'oid-prefix'       : '\"public\"',
-                'path_to_run_query': sk_runner.default_path}
+                'path_to_run_query': 'cd ~/skyhookdm-ceph/build/ && bin/run-query'}
 
 
 def get_expected_value(path):
@@ -60,7 +60,7 @@ class TestInterface(unittest.TestCase):
         q.sql("select * from lineitem")
         q.run()
 
-        expected = get_expected_value(os.getcwd() + "/tests/expected/query/test_a_expected.txt")
+        expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_a_expected.txt")
         self.assertEqual(q.results, expected)
 
         time.sleep(5)
@@ -77,7 +77,7 @@ class TestInterface(unittest.TestCase):
         q.sql("select orderkey,discount,shipdate from lineitem")
         q.run()
 
-        expected = get_expected_value(os.getcwd() + "../resources/expected-query/query/test_b_expected.txt")
+        expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_b_expected.txt")
         self.assertEqual(q.results, expected)
 
         time.sleep(5)
@@ -95,13 +95,12 @@ class TestInterface(unittest.TestCase):
 
         expected_query = {'selection'  :'',
                           'projection' :'orderkey,discount,shipdate', 
-                          'table-name' :'lineitem',
-                          'options'    : options_no_cls}
+                          'table-name' :'lineitem'}
         self.assertEqual(q.query, expected_query)
 
         q.run()
 
-        expected = get_expected_value(os.getcwd() + "../resources/expected-query/query/test_c_expected.txt")
+        expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_c_expected.txt")
         self.assertEqual(q.results, expected)
 
         time.sleep(5)
@@ -118,7 +117,7 @@ class TestInterface(unittest.TestCase):
 
         q.run()
 
-        expected = get_expected_value(os.getcwd() + "../resources/expected-query/query/test_d_expected.txt")
+        expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_d_expected.txt")
         self.assertEqual(q.results, expected)
 
         time.sleep(5)
@@ -133,19 +132,18 @@ class TestInterface(unittest.TestCase):
         self.assertEqual(q.options, options_quiet)
 
         q.set_projection("orderkey,tax,commitdate")
-        q.set_selection("lt, orderkey, 5")
+        q.set_selection("orderkey, lt, 5")
         q.set_table_name("lineitem")
 
         expected_query = {'selection'  :['gt', 'orderkey', '3'],
                           'projection' :'tax,orderkey', 
-                          'table-name' :'lineitem',
-                          'options'    : options_quiet}
+                          'table-name' :'lineitem'}
 
         self.assertNotEqual(q.query, expected_query)
 
         q.run()
 
-        expected = get_expected_value(os.getcwd() + "../resources/expected-query/query/test_e_expected.txt")
+        expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_e_expected.txt")
         self.assertEqual(q.results, expected)
 
         time.sleep(5)
@@ -162,7 +160,7 @@ class TestInterface(unittest.TestCase):
 
         q.run()
 
-        expected = get_expected_value(os.getcwd() + "../resources/expected-query/query/test_f_expected.txt")
+        expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_f_expected.txt")
         self.assertEqual(q.results, expected)
 
         time.sleep(5)
@@ -172,7 +170,7 @@ class TestInterface(unittest.TestCase):
         runner = SkyhookRunner()
 
         q = Query()
-        q.set_selection("gt, orderkey, 3")
+        q.set_selection("orderkey, gt, 3")
         q.set_projection("shipdate,orderkey")
         q.set_table_name("lineitem")
         q.set_option("cls", False)
@@ -181,9 +179,9 @@ class TestInterface(unittest.TestCase):
         q.set_option("num-objs", 10)
         q.set_option("pool", "name")
 
-        cmd = runner.create_sk_cmd(q.query)
+        cmd = runner.create_sk_cmd(q.query, q.options)
 
-        expected = get_expected_value(os.getcwd() + "../resources/expected-query/skyhook/test_g_expected.txt")
+        expected = get_expected_value(os.getcwd() + "/resources/expected-sql/skyhook/test_g_expected.txt")
         self.assertEqual(cmd, expected)
 
         time.sleep(5)
@@ -194,7 +192,7 @@ class TestInterface(unittest.TestCase):
 
         parsed = parser.parse_query("select everything from thisTable where everything like 'nothing'")
 
-        expected = get_expected_value(os.getcwd() + "../resources/expected-query/parser/test_h_expected.txt")
+        expected = get_expected_value(os.getcwd() + "/resources/expected-sql/parser/test_h_expected.txt")
         self.assertEqual(str(parsed), expected) 
 
         time.sleep(5)

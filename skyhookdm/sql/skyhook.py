@@ -35,7 +35,7 @@ class SkyhookRunner:
             command_args.append("--quiet")
 
         if query['projection']:
-            projection = ','.join(query['projection'])
+            projection = ','.join(query['projection']).replace(' ', '')
             command_args.append("--project \"{}\" ".format(projection))
 
         if query['selection']:
