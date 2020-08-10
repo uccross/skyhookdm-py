@@ -101,6 +101,8 @@ class SQLParser():
                      'projection': format_ids(projection_ids),
                      'selection' : format_ids(selection_ids)}
 
+            print(query)
+
             return query
 
 

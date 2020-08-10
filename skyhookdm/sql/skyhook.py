@@ -3,6 +3,7 @@ import subprocess
 
 class SkyhookRunner:
     """A class that builds Skyhook CLI commands and executes them."""
+    supported_ops = ['geq', 'leq', 'ne', 'eq', 'gt', 'lt', 'like']
 
     @classmethod
     def create_sk_cmd(cls, query, options):
@@ -38,7 +39,7 @@ class SkyhookRunner:
             command_args.append("--project \"{}\" ".format(projection))
 
         if query['selection']:
-            predicates = ';'.join(query['selection'])
+            predicates = ';'.join(query['selection']).replace(' ', '')
             command_args.append("--select \"{}\"".format(predicates))
 
         return command_args

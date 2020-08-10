@@ -59,19 +59,19 @@ class Query():
         """Sets the selection parameter for a query.
 
         Arguments:
-        values -- Any number of strings of predicates of the form \"<comparison>,<operand>,<operand>\"
+        values -- Any number of strings of predicates of the form \"<operand>,<comparison>,<operand>\"
         """
         predicates = []
         for value in values:
             if not isinstance(value, str):
                 raise TypeError("Value of predicate must be a string")
+            if value ==  '': 
+                continue
             if len(value.split()) != 3:
-                raise ValueError("Expected predicate formatted: \"<comparison>,<operand>,<operand>\"")
-            # TODO: Opertors belong in utils or SkyhookRunner? 
-            operators = ['geq', 'leq', 'ne', 'eq', 'gt', 'lt', 'like']
+                raise ValueError("Expected predicate formatted: \"<operand>,<comparison>,<operand>\"")
             comparison_op = value.split()[1].strip(', ')
-            if comparison_op not in operators:
-                raise ValueError("Comparison operator \'{}\' is not in {}".format(comparison_op, operators))
+            if comparison_op not in SkyhookRunner.supported_ops:
+                raise ValueError("Comparison operator \'{}\' is not a supported operation".format(comparison_op))
             predicates.append(value)
             self.query['selection'] = predicates
 
