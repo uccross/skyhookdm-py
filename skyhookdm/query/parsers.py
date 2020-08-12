@@ -2,6 +2,8 @@ import sqlparse
 from sqlparse.tokens import Keyword, DML
 from sqlparse.sql import IdentifierList, Identifier, Where, Parenthesis, Comparison
 
+from .models import SQLIR
+
 class SQLParser():
     """A class that parses SQL statements."""
 
@@ -18,11 +20,11 @@ class SQLParser():
         try:
             assert isinstance(raw_query, str)
         except AssertionError as error:
-            print("Error: Cannot parse non-string query {}: {}.".format(raw_query, error))
+            print("Error: Cannot parse non-string {}".format(raw_query, error))
             return
 
-        def parse_clauses(parsed):
-            def parse_where_clause(parsed):
+        def parse_clauses(tokenized):
+            def parse_where_clause(tokenized):
                 allowed_ops = ['>=', '<=', '!=', '<>', '=', '>', '<', 'LIKE']
 
                 operator_strs = {allowed_ops[0] : 'geq',
@@ -38,7 +40,7 @@ class SQLParser():
                 identifier = None
 
                 # TODO: Allow multiple WHERE predicates by converting this to a loop? 
-                for item in parsed.tokens:
+                for item in tokenized.tokens:
                     if isinstance(item, Where):
                         for i in item.tokens:
                             if isinstance(i, Comparison):
@@ -53,9 +55,9 @@ class SQLParser():
                                 where_tokens.append(str(i.right))
                 return where_tokens
 
-            def parse_from_clause(parsed):
+            def parse_from_clause(tokenized):
                     from_seen = False
-                    for item in parsed.tokens:
+                    for item in tokenized.tokens:
                         if from_seen:
                             if item.ttype is Keyword:
                                 return
@@ -64,9 +66,9 @@ class SQLParser():
                         elif item.ttype is Keyword and item.value.upper() == 'FROM':
                             from_seen = True
 
-            def parse_select_clause(parsed):
+            def parse_select_clause(tokenized):
                 select_seen = False
-                for item in parsed.tokens:
+                for item in tokenized.tokens:
                     if select_seen:
                         if item.ttype is Keyword:
                             return
@@ -89,27 +91,26 @@ class SQLParser():
                 formatted_ids = ', '.join(identifiers)
                 return formatted_ids                
 
-            select_stream = parse_select_clause(parsed)
+            select_stream = parse_select_clause(tokenized)
             projection_ids = list(extract_identifiers(select_stream))
 
-            from_stream = parse_from_clause(parsed)
+            from_stream = parse_from_clause(tokenized)
             table_ids = list(extract_identifiers(from_stream))
 
-            selection_ids = parse_where_clause(parsed)
+            selection_ids = parse_where_clause(tokenized)
 
-            query = {'table-name': format_ids(table_ids),
-                     'projection': format_ids(projection_ids),
-                     'selection' : format_ids(selection_ids)}
+            sqlir = SQLIR()
 
-            print(query)
+            sqlir.set_projection(format_ids(projection_ids))
+            sqlir.set_selection(format_ids(selection_ids))
+            sqlir.set_table_name(format_ids(table_ids))
 
-            return query
+            return sqlir
 
 
         sql_statement = sqlparse.split(raw_query)[0]
         
         tokenized = sqlparse.parse(sql_statement)[0]
 
-        parsed = parse_clauses(tokenized)
+        return parse_clauses(tokenized)
 
-        return parsed

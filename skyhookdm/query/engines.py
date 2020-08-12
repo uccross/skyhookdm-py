@@ -1,12 +1,13 @@
 import os
 import subprocess
 
-class SkyhookRunner:
+from .models import SQLIR
+
+class SkyhookRunQuery:
     """A class that builds Skyhook CLI commands and executes them."""
-    supported_ops = ['geq', 'leq', 'ne', 'eq', 'gt', 'lt', 'like']
 
     @classmethod
-    def create_sk_cmd(cls, query, options):
+    def create_sk_cmd(cls, query):
         """A function that yields a generator for the Skyhook CLI command from a Query Object. 
 
         Arguments:
@@ -16,30 +17,33 @@ class SkyhookRunner:
         Returns:
         skyhook_cmd -- A list of the arguments of the Skyhook run-query command stirng
         """
+        if not isinstance(query, SQLIR):
+            raise TypeError("Query must be of type SQLIR")
+
         command_args = [
-            options['path_to_run_query'],
+            query.options['path_to_run_query'],
             
-            '--num-objs'   , options['num-objs'],
-            '--pool'       , options['pool'],
-            '--oid-prefix' , "\"{}\"".format(options['oid-prefix']),
-            '--table-name' , "\"{}\"".format(','.join(query['table-name']))
+            '--num-objs'   , query.options['num-objs'],
+            '--pool'       , query.options['pool'],
+            '--oid-prefix' , "\"{}\"".format(query.options['oid-prefix']),
+            '--table-name' , "\"{}\"".format(','.join(query.ir['table-name']))
         ]
 
-        if options['header']:
+        if query.options['header']:
             command_args.append("--header")
 
-        if options['cls']:
+        if query.options['cls']:
             command_args.append("--use-cls")
 
-        if options['quiet']:
+        if query.options['quiet']:
             command_args.append("--quiet")
 
-        if query['projection']:
-            projection = ','.join(query['projection']).replace(' ', '')
+        if query.ir['projection']:
+            projection = ','.join(query.ir['projection']).replace(' ', '')
             command_args.append("--project \"{}\" ".format(projection))
 
-        if query['selection']:
-            predicates = ';'.join(query['selection']).replace(' ', '')
+        if query.ir['selection']:
+            predicates = ';'.join(query.ir['selection']).replace(' ', '')
             command_args.append("--select \"{}\"".format(predicates))
 
         return command_args
@@ -53,13 +57,11 @@ class SkyhookRunner:
 
         Returns: The stdout results of a subprocess execution of command_args 
         """
-        # result = os.popen("cd " + command).read()
-        # return result
         cmd_completion = subprocess.run(command_args, check=True, stdout=subprocess.PIPE)
         return cmd_completion.stdout
 
     @classmethod
-    def run_query(cls, query, options): 
+    def run_query(cls, query): 
         """A function that generates and executes a Skyhook CLI command from a query object. 
 
         Arguments: 
@@ -68,13 +70,9 @@ class SkyhookRunner:
 
         Returns: The results of a query execution
         """
-        command_args = create_sk_cmd(query, options)
+        if not isinstance(query, SQLIR):
+            raise TypeError("Query must be of type SQLIR")
+
+        command_args = create_sk_cmd(query)
 
         return self.execute_command(command_args)
-
-    @classmethod
-    def package_arrow_objects(cls):
-        """A function to coordinate the joining of arrow objects return from a Skyhook CLI command execution. 
-
-        """
-        raise NotImplementedError

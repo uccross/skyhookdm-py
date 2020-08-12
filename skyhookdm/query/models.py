@@ -1,7 +1,4 @@
-from .parser import SQLParser
-from .skyhook import SkyhookRunner
-
-class Query():
+class SQLIR():
     """A class that represents a mutable SQL query object."""
 
     def __init__(self):        
@@ -15,45 +12,11 @@ class Query():
                         'oid-prefix'       : 'public',
                         'path_to_run_query': 'cd ~/skyhookdm-ceph/build/ && bin/run-query'}
 
-        self.query = {'selection'  : [],
-                      'projection' : [],
-                      'table-name' : []}
+        self.ir = {'selection'  : [],
+                   'projection' : [],
+                   'table-name' : []}
         
         self.results = None
-
-    def sql(self, statement):
-        """Parses SQL statement and sets Query object parameters. 
-
-        Arguments:
-        statement -- A string parsed as an unvalidated SQL statement
-        """
-        self.statement = statement
-        parsed = SQLParser.parse_query(statement)
-        self.set_table_name(parsed['table-name'])
-        self.set_projection(parsed['projection'])
-        self.set_selection(parsed['selection'])
-
-    def run(self):
-        """A function that executes the Skyhook CLI command by calling the run-query binary."""
-        self.results = SkyhookRunner.run_query(self.query, self.options)
-
-    def lifetime(self, statement):
-        """A function that performs a full SQL query execution. 
-
-        Arguments:
-        statement -- A string parsed as an unvalidated SQL statement
-        """
-        query = SQLParser.parse_query(statement)
-
-        self.set_projection(query['projection'])
-        
-        self.set_selection(query['selection'])
-
-        self.set_table_name(query['table-name'])
-
-        self.create_sk_cmd()
-
-        self.run()
 
     def set_selection(self, *values):
         """Sets the selection parameter for a query.
@@ -70,10 +33,11 @@ class Query():
             if len(value.split()) != 3:
                 raise ValueError("Expected predicate formatted: \"<operand>,<comparison>,<operand>\"")
             comparison_op = value.split()[1].strip(', ')
-            if comparison_op not in SkyhookRunner.supported_ops:
+            supported_ops = ['geq', 'leq', 'ne', 'eq', 'gt', 'lt', 'like']
+            if comparison_op not in supported_ops:
                 raise ValueError("Comparison operator \'{}\' is not a supported operation".format(comparison_op))
             predicates.append(value)
-            self.query['selection'] = predicates
+            self.ir['selection'] = predicates
 
     def set_projection(self, *values):
         """Sets the projection parameter for a query.
@@ -86,7 +50,7 @@ class Query():
             if not isinstance(value, str):
                 raise TypeError("Value of attribute must be a string")
             attributes.append(value)
-        self.query['projection'] = attributes
+        self.ir['projection'] = attributes
 
     def set_table_name(self, *values):
         """Sets the table name parameter for a query.
@@ -99,7 +63,7 @@ class Query():
             if not isinstance(value, str):
                 raise TypeError("Value of table name must be a string")
             table_names.append(value)
-        self.query['table-name'] = table_names
+        self.ir['table-name'] = table_names
 
     def set_option(self, option, value):
         """Sets the option to be the given value.
@@ -115,7 +79,7 @@ class Query():
 
     def show_query(self):
         """A function that prints the current Query object."""
-        print(self.query)
+        print(self.ir)
 
     def show_options(self):
         """A function that prints the current options being used."""
@@ -124,12 +88,3 @@ class Query():
     def show_results(self):
         """A function that prints the results of the previously ran query."""
         print(self.results)
-
-    def show_sk_cmd(self):
-        """A function that prints the Skyhook CLI command representation of the query object."""
-        sk_cmd = SkyhookRunner.create_sk_cmd(self.query, self.options)
-        print(sk_cmd)
-
-    def generate_pyarrow_dataframe(self):
-        """An example of what may be done in the near future."""
-        raise NotImplementedError

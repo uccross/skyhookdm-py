@@ -3,12 +3,11 @@ import os
 import sys
 import time 
 
-from skyhookdm.sql.query import Query
-from skyhookdm.sql.skyhook import SkyhookRunner
-from skyhookdm.sql.parser import SQLParser
+from skyhookdm.query.interfaces import SQLIR
+from skyhookdm.query.engines import SkyhookRunQuery
+from skyhookdm.query.parsers import SQLParser
 
 #### Options for test validation ####
-sk_runner = SkyhookRunner()
 options_default = {'cls'            : True,
                 'quiet'            : False,
                 'header'           : True,
@@ -49,10 +48,11 @@ class TestInterface(unittest.TestCase):
     A testing module for each interface provided by the SkyhookSQL client. 
     '''
 
+    # TODO: @Matthew Test query results need to be validated. 
     #### Projection Queries ####
     def test_a_projection_1(self):
         # Init Query Object
-        q = Query()
+        q = SQLIR()
 
         # Verify default options
         self.assertEqual(q.options, options_default)
@@ -67,7 +67,7 @@ class TestInterface(unittest.TestCase):
 
     def test_b_projection_2_quiet(self):
         # Init Query
-        q = Query() 
+        q = SQLIR() 
 
         q.set_option('quiet', True)
 
@@ -83,7 +83,7 @@ class TestInterface(unittest.TestCase):
         time.sleep(5)
     
     def test_c_projection_3_no_cls(self):
-        q = Query()
+        q = SQLIR()
         
         q.set_option('cls', False)
 
@@ -108,7 +108,7 @@ class TestInterface(unittest.TestCase):
     #### Selection Queries ####
     def test_d_selection_1(self): 
         # Init Query Object
-        q = Query()
+        q = SQLIR()
 
         # Verify default options
         self.assertEqual(q.options, options_default)
@@ -124,7 +124,7 @@ class TestInterface(unittest.TestCase):
 
     def test_e_selection_2_quiet(self):
         # Init Query
-        q = Query() 
+        q = SQLIR() 
 
         q.set_option('quiet', True)
 
@@ -149,7 +149,7 @@ class TestInterface(unittest.TestCase):
         time.sleep(5)
     
     def test_f_selection_3_no_cls(self):
-        q = Query()
+        q = SQLIR()
         
         q.set_option('cls', False)
 
@@ -167,8 +167,6 @@ class TestInterface(unittest.TestCase):
 
     #### Skyhook Runner ####
     def test_g_skyhook_cmd(self):
-        runner = SkyhookRunner()
-
         q = Query()
         q.set_selection("orderkey, gt, 3")
         q.set_projection("shipdate,orderkey")
@@ -179,7 +177,7 @@ class TestInterface(unittest.TestCase):
         q.set_option("num-objs", 10)
         q.set_option("pool", "name")
 
-        cmd = runner.create_sk_cmd(q.query, q.options)
+        cmd = SkyhookRunner.create_sk_cmd(q.query, q.options)
 
         expected = get_expected_value(os.getcwd() + "/resources/expected-sql/skyhook/test_g_expected.txt")
         self.assertEqual(cmd, expected)
@@ -188,9 +186,7 @@ class TestInterface(unittest.TestCase):
 
     #### Parser ####
     def test_h_parse_query(self):
-        parser = SQLParser()
-
-        parsed = parser.parse_query("select everything from thisTable where everything like 'nothing'")
+        parsed = SQLParser.parse_query("select everything from thisTable where everything like 'nothing'")
 
         expected = get_expected_value(os.getcwd() + "/resources/expected-sql/parser/test_h_expected.txt")
         self.assertEqual(str(parsed), expected) 
