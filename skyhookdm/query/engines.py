@@ -19,27 +19,27 @@ class SkyhookRunQuery:
         """
         if not isinstance(query, SQLIR):
             raise TypeError("Query must be of type SQLIR")
-        if not isinstance(engine_options, EngineOptions):
+        if not isinstance(engine_options, VerifiedOptions):
             raise TypeError("Engine options must be of type EngineOptions")
-        if not isinstance(dataset_options, DatasetOptions):
+        if not isinstance(dataset_options, VerifiedOptions):
             raise TypeError("Dataset options must be of type DatasetOptions")
 
         command_args = [
-            engine_options['program'],
+            engine_options.options['program'],
             
-            '--num-objs'   , engine_options['num-objs'],
-            '--pool'       , dataset_options['pool'],
-            '--oid-prefix' , f"\"{dataset_options['oid-prefix']}\"",
+            '--num-objs'   , engine_options.options['num-objs'],
+            '--pool'       , dataset_options.options['pool'],
+            '--oid-prefix' , f"\"{dataset_options.options['oid-prefix']}\"",
             '--table-name' , f"\"{query.ir['table-name']}\""
         ]
 
-        if dataset_options['header']:
+        if engine_options.options['header']:
             command_args.append("--header")
 
-        if engine_options['cls']:
+        if engine_options.options['cls']:
             command_args.append("--use-cls")
 
-        if engine_options['quiet']:
+        if engine_options.options['quiet']:
             command_args.append("--quiet")
 
         if query.ir['projection']:
@@ -79,9 +79,12 @@ class SkyhookRunQuery:
         return cls._execute_sk_cmd(command_args)
 
 class DatasetOptions():
+    """A class that manages the metadata of a dataset"""
+    
+    all_dataset_options = ['pool', 'table_name', 'oid_prefix']
+
     defaults = {'pool'        : 'tpchdata',
                 'table-name'  : 'lineitem',
-                'header'      : True,
                 'oid-prefix'  : 'public'}
     
     @classmethod
@@ -91,10 +94,13 @@ class DatasetOptions():
         Arguments:
         dataset -- A string representing the name of a dataset
         """
+        if dataset is None:
+            return VerifiedOptions(cls.defaults)
         if not isinstance(dataset, str):
             raise TypeError("Input must be a string")
-        if dataset is None:
-            return cls.defaults
+        else:
+            cls._find_dataset(dataset)
+            # TODO: @Matthew How to get dataset, and verify? 
         
     @staticmethod
     def _find_dataset(dataset):
@@ -104,13 +110,16 @@ class DatasetOptions():
 class EngineOptions():
     """A class that manages the SkyhookRunQuery engine options"""
 
-    # Include output format, start_object options 
-    defaults = {'cls'           : True,
-                'quiet'         : False,
-                'start-obj'     : 0,
-                'num-objs'      : 2,
-                'output-format' : 'SFT_CSV',
-                'program'       : 'bin/run-query'}
+    all_options = ['cls', 'quiet', 'start_obj',
+                   'num_objs', 'output_format', 'program']
+
+    skyhook_defaults = {'cls'           : True,
+                        'quiet'         : False,
+                        'header'      : True,
+                        'start-obj'     : 0,
+                        'num-objs'      : 2,
+                        'output-format' : 'SFT_CSV',
+                        'program'       : 'bin/run-query'}
 
     @classmethod
     def get_options(cls, options=None):
@@ -121,28 +130,37 @@ class EngineOptions():
                    dictionary of Skyhook options
         """
         if options is None:
-            return cls.defaults
+            return VerifiedOptions(cls.skyhook_defaults)
 
-        cls._set_options()
+        return VerifiedOptions(cls._set_options(options, cls.all_options))
+        
 
     @staticmethod
-    def _set_options(options, value):
+    def _set_options(options, all_options):
         """Sets the option to be the given value.
 
         Arguments:
-        option -- The string name of the option to be changed
-        value  -- The string value of the option to be set
+        option -- The dictionary of options and their values
+        all_options -- The list of available options 
         """
-        self._check(option)
-        self.options[str(option)] = value 
+        if not EngineOptions._check(options, all_options):
+            raise ValueError(f"{option} not an available option")
+        return options
 
     @staticmethod
-    def _check(options):
+    def _check(options, all_options):
         """Checks that the options are available for Skyhook
 
         Arguments:
-        options -- A dictionary of options and their values.
+        options -- A dictionary of options and their values
+        all_options -- The list of available options
         """
         for option in options:
-            if option not in self.options:
-                raise ValueError(f"{option} not an option")
+            if option not in all_options:
+                return False
+        return True
+
+class VerifiedOptions():
+    """A dummy class that simply confirms that options were checked"""
+    def __init__(self, options):
+        self.options = options
