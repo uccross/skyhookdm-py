@@ -2,21 +2,9 @@ class SQLIR():
     """A class that represents a mutable SQL query object."""
 
     def __init__(self):        
-        self.statement = ''
-
-        self.options = {'cls'              : True,
-                        'quiet'            : False,
-                        'header'           : True,
-                        'pool'             : 'tpchdata',
-                        'num-objs'         : '2',
-                        'oid-prefix'       : 'public',
-                        'path_to_run_query': 'cd ~/skyhookdm-ceph/build/ && bin/run-query'}
-
         self.ir = {'selection'  : [],
                    'projection' : [],
                    'table-name' : []}
-        
-        self.results = None
 
     def set_selection(self, *values):
         """Sets the selection parameter for a query.
@@ -65,26 +53,6 @@ class SQLIR():
             table_names.append(value)
         self.ir['table-name'] = table_names
 
-    def set_option(self, option, value):
-        """Sets the option to be the given value.
-
-        Arguments:
-        option -- The string name of the option to be changed
-        value  -- The string value of the option to be set
-        """
-        if option not in self.options.keys():
-            print("Error: Not an option")
-            return
-        self.options[str(option)] = value 
-
     def show_query(self):
         """A function that prints the current Query object."""
         print(self.ir)
-
-    def show_options(self):
-        """A function that prints the current options being used."""
-        print(self.options)
-
-    def show_results(self):
-        """A function that prints the results of the previously ran query."""
-        print(self.results)
