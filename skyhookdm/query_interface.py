@@ -21,7 +21,7 @@ def dataset_options(dataset=None):
     return DatasetOptions.get_dataset(dataset)
 
 def change_option(options):
-    pass
+    return NotImplemented
 
 def run(query, engine_options, dataset_options):
     """A function that executes a Skyhook CLI command.
