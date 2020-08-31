@@ -53,6 +53,12 @@ class SQLIR():
             table_names.append(value)
         self.ir['table-name'] = table_names
 
+    def set_create_index(self, *values):
+        pass
+
+    def set_describe_table(self, *values):
+        pass
+
     def show_query(self):
         """A function that prints the current Query object."""
         print(self.ir)

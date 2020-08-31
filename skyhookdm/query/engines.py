@@ -1,9 +1,22 @@
 import os
 import subprocess
+from abc import ABC, abstractmethod
 
 from .models import SQLIR
 
-class SkyhookRunQuery:
+class Engine(ABC):
+    """Abstract class for engine implementations.
+
+    Engines (e.g. Skyhook's Run Query) are used to transform
+    an intermediate representation of queries into commands or
+    library calls to a particular data management system. This
+    class provides a skeleton for functionality that must be 
+    supported by any engine implemented via this interface. 
+    """
+    def __init__(self):
+        pass
+
+class SkyhookRunQuery(Engine):
     """An engine for building and executing Skyhook CLI commands."""
 
     @classmethod
@@ -19,10 +32,10 @@ class SkyhookRunQuery:
         """
         if not isinstance(query, SQLIR):
             raise TypeError("Query must be of type SQLIR")
-        if not isinstance(engine_options, VerifiedOptions):
-            raise TypeError("Engine options must be of type EngineOptions")
-        if not isinstance(dataset_options, VerifiedOptions):
-            raise TypeError("Dataset options must be of type DatasetOptions")
+        if not isinstance(engine_options, Options):
+            raise TypeError("Engine options must be of type Options")
+        if not isinstance(dataset_options, Options):
+            raise TypeError("Dataset options must be of type Options")
 
         command_args = [
             engine_options.options['program'],
@@ -30,7 +43,7 @@ class SkyhookRunQuery:
             '--num-objs'   , engine_options.options['num-objs'],
             '--pool'       , dataset_options.options['pool'],
             '--oid-prefix' , f"\"{dataset_options.options['oid-prefix']}\"",
-            '--table-name' , f"\"{query.ir['table-name']}\""
+            '--table-name' , f"\"{','.join(query.ir['table-name']).replace(' ', '')}\""
         ]
 
         if engine_options.options['header']:
@@ -53,7 +66,7 @@ class SkyhookRunQuery:
         return command_args
 
     @staticmethod
-    def _execute_sk_cmd(cls, command_args):
+    def _execute_sk_cmd(command_args):
         """A function that executes a Skyhook CLI command. 
 
         Arguments:
@@ -78,11 +91,20 @@ class SkyhookRunQuery:
 
         return cls._execute_sk_cmd(command_args)
 
+class Options():
+    """(Dummy) class for engine and dataset options
+
+    TODO: @Matthew
+    Engines and datasets that use options to represent argument flags 
+    or metadata. This abstract class implements a general procedure
+    for verifying that options are allowed by an engine or dataset. 
+    """
+    def __init__(self, opts):
+        self.options = opts
+
 class DatasetOptions():
     """A class that manages the metadata of a dataset"""
     
-    all_dataset_options = ['pool', 'table_name', 'oid_prefix']
-
     defaults = {'pool'        : 'tpchdata',
                 'table-name'  : 'lineitem',
                 'oid-prefix'  : 'public'}
@@ -95,7 +117,7 @@ class DatasetOptions():
         dataset -- A string representing the name of a dataset
         """
         if dataset is None:
-            return VerifiedOptions(cls.defaults)
+            return Options(cls.defaults)
         if not isinstance(dataset, str):
             raise TypeError("Input must be a string")
         else:
@@ -104,63 +126,66 @@ class DatasetOptions():
         
     @staticmethod
     def _find_dataset(dataset):
+        all_dataset_options = ('pool', 'table_name', 'oid_prefix')
+        # TODO: @Matthew Calls skyhook_get_dataset() method
         pass
         
 
 class EngineOptions():
     """A class that manages the SkyhookRunQuery engine options"""
 
-    all_options = ['cls', 'quiet', 'start_obj',
-                   'num_objs', 'output_format', 'program']
-
     skyhook_defaults = {'cls'           : True,
                         'quiet'         : False,
-                        'header'      : True,
-                        'start-obj'     : 0,
-                        'num-objs'      : 2,
+                        'header'        : True,
+                        'start-obj'     : '0',
+                        'num-objs'      : '2',
                         'output-format' : 'SFT_CSV',
-                        'program'       : 'bin/run-query'}
+                        'program'       : '~/skyhookdm-ceph/build/bin/run-query'}
 
     @classmethod
-    def get_options(cls, options=None):
+    def get_options(cls, engine, options=None):
         """A function that returns Skyhook Engine options 
 
         Arguments:
         options -- If None, return default options. Otherwise, check options and return
                    dictionary of Skyhook options
         """
-        if options is None:
-            return VerifiedOptions(cls.skyhook_defaults)
+        if engine is None and options is None:
+            return Options(cls.skyhook_defaults)
+        elif options is None:
+            return cls._get_def_options(engine)
+        else:
+            return cls._set_def_options(engine, options)
 
-        return VerifiedOptions(cls._set_options(options, cls.all_options))
+        return cls._set_options(options)
         
+    @staticmethod
+    def _get_def_options(engine):
+        pass
 
     @staticmethod
-    def _set_options(options, all_options):
+    def _set_options(engine, options):
         """Sets the option to be the given value.
 
         Arguments:
         option -- The dictionary of options and their values
         all_options -- The list of available options 
         """
-        if not EngineOptions._check(options, all_options):
-            raise ValueError(f"{option} not an available option")
+        if not EngineOptions._check(options):
+            raise ValueError(f"Invalid option in {options}")
         return options
 
     @staticmethod
-    def _check(options, all_options):
+    def _check(options):
         """Checks that the options are available for Skyhook
 
         Arguments:
         options -- A dictionary of options and their values
         all_options -- The list of available options
         """
+        all_options = ('cls', 'quiet', 'start_obj',
+                       'num_objs', 'output_format', 'program')
         for option in options:
             if option not in all_options:
                 return False
         return True
-
-class VerifiedOptions():
-    """A dummy class that simply confirms that options were checked"""
-    def __init__(self, options):
-        self.options = options

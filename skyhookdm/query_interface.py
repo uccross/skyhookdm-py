@@ -9,19 +9,16 @@ def query_string(statement):
     """
     return SQLParser.parse_query(statement)
 
-def engine_options(options=None):
+def engine_options(options=None, engine=None):
     """A function that returns an EngineOptions object
     
     Arguments:
     options -- A dictionary of options and their values. If None, default options returned
     """
-    return EngineOptions.get_options(options)
+    return EngineOptions.get_options(engine, options)
 
 def dataset_options(dataset=None):
     return DatasetOptions.get_dataset(dataset)
-
-def change_option(options):
-    return NotImplemented
 
 def run(query, engine_options, dataset_options):
     """A function that executes a Skyhook CLI command.
@@ -40,8 +37,3 @@ def show_sk_cmd(query, engine_options, dataset_options):
     query -- Intermediate representation of a SQL statement
     """
     print(SkyhookRunQuery.create_sk_cmd(query, engine_options, dataset_options))
-    
-
-def show_options():
-    """A function that prints the current options being used."""
-    return NotImplemented

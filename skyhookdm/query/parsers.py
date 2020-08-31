@@ -1,5 +1,5 @@
 import sqlparse
-from sqlparse.tokens import Keyword, DML
+from sqlparse.tokens import Keyword, DML, DDL
 from sqlparse.sql import IdentifierList, Identifier, Where, Parenthesis, Comparison
 
 from .models import SQLIR
@@ -22,6 +22,12 @@ class SQLParser():
         except AssertionError as error:
             print("Error: Cannot parse non-string {}".format(raw_query, error))
             return
+
+        def parse_describe_table(tokenized):
+            pass
+
+        def parse_create_index(tokenized):
+            pass 
 
         def parse_clauses(tokenized):
             def parse_where_clause(tokenized):
@@ -90,6 +96,16 @@ class SQLParser():
                     return ''
                 formatted_ids = ', '.join(identifiers)
                 return formatted_ids                
+
+            '''
+            Special case for CREATE INDEX or DESCRIBE TABLE
+            '''
+            if tokenized[0].ttype is DDL and tokenized[0].value.upper() == 'CREATE':
+                sqlir = SQLIR().set_create_index(parse_create_index(tokenized))
+                return sqlir
+            elif tokenized[0].ttype is Keyword and tokenized[0].value.upper() == 'DESCRIBE':
+                sqlir = SQLIR().set_describe_table(parse_describe_table(tokenized))
+                return sqlir
 
             select_stream = parse_select_clause(tokenized)
             projection_ids = list(extract_identifiers(select_stream))
