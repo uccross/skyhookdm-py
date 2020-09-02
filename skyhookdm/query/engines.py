@@ -43,8 +43,13 @@ class SkyhookRunQuery(Engine):
             '--num-objs'   , engine_options.options['num-objs'],
             '--pool'       , dataset_options.options['pool'],
             '--oid-prefix' , f"\"{dataset_options.options['oid-prefix']}\"",
-            '--table-name' , f"\"{','.join(query.ir['table-name']).replace(' ', '')}\""
+            '--table-name' 
         ]
+
+        if len(query.ir['table-name']) > 0:
+            command_args.append(f"\"{','.join(query.ir['table-name']).replace(' ', '')}\"")
+        else:
+            command_args.append(f"\"{(dataset_options.options['table-name']).replace(' ', '')}\"")
 
         if engine_options.options['header']:
             command_args.append("--header")
@@ -73,7 +78,8 @@ class SkyhookRunQuery(Engine):
 
         if 'index-cols' in query.ir['options']:
             command_args.append("--index-cols")
-            command_args.append("")
+            attributes = ','.join(query.ir['attributes']).replace(' ','')
+            command_args.append(f"{attributes}")
 
 
         return command_args
