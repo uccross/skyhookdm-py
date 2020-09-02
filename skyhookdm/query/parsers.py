@@ -23,15 +23,16 @@ class SQLParser():
             print("Error: Cannot parse non-string {}".format(raw_query, error))
             return
 
-        def parse_describe_table(tokenized):
-            pass
-
-        def parse_create_index(tokenized):
-            pass 
+        def parse_identifiers(tokenized):
+            identifiers =  []
+            for i in tokenized:
+                if isinstance(i, Identifier):
+                    identifiers.append(str(i))
+            return identifiers
 
         def parse_clauses(tokenized):
             def parse_where_clause(tokenized):
-                allowed_ops = ['>=', '<=', '!=', '<>', '=', '>', '<', 'LIKE']
+                allowed_ops = ('>=', '<=', '!=', '<>', '=', '>', '<', 'LIKE')
 
                 operator_strs = {allowed_ops[0] : 'geq',
                              allowed_ops[1] : 'leq',
@@ -100,28 +101,27 @@ class SQLParser():
             '''
             Special case for CREATE INDEX or DESCRIBE TABLE
             '''
-            if tokenized[0].ttype is DDL and tokenized[0].value.upper() == 'CREATE':
-                sqlir = SQLIR().set_create_index(parse_create_index(tokenized))
-                return sqlir
-            elif tokenized[0].ttype is Keyword and tokenized[0].value.upper() == 'DESCRIBE':
-                sqlir = SQLIR().set_describe_table(parse_describe_table(tokenized))
-                return sqlir
-
-            select_stream = parse_select_clause(tokenized)
-            projection_ids = list(extract_identifiers(select_stream))
-
-            from_stream = parse_from_clause(tokenized)
-            table_ids = list(extract_identifiers(from_stream))
-
-            selection_ids = parse_where_clause(tokenized)
-
             sqlir = SQLIR()
+            if tokenized[0].ttype is DDL and tokenized[0].value.upper() == 'CREATE': # TODO: @Matthew Also check for 'INDEX'
+                sqlir.set_create_index(format_ids(parse_identifiers(tokenized)))
+                return sqlir
+            elif tokenized[0].ttype is Keyword and tokenized[0].value.upper() == 'DESCRIBE': # TODO: @Matthew Also check for 'TABLE'
+                sqlir.set_describe_table(format_ids(parse_identifiers(tokenized)))
+                return sqlir
+            else:
+                select_stream = parse_select_clause(tokenized)
+                projection_ids = list(extract_identifiers(select_stream))
 
-            sqlir.set_projection(format_ids(projection_ids))
-            sqlir.set_selection(format_ids(selection_ids))
-            sqlir.set_table_name(format_ids(table_ids))
+                from_stream = parse_from_clause(tokenized)
+                table_ids = list(extract_identifiers(from_stream))
 
-            return sqlir
+                selection_ids = parse_where_clause(tokenized)
+
+                sqlir.set_projection(format_ids(projection_ids))
+                sqlir.set_selection(format_ids(selection_ids))
+                sqlir.set_table_name(format_ids(table_ids))
+
+                return sqlir
 
 
         sql_statement = sqlparse.split(raw_query)[0]

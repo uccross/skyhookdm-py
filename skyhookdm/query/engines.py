@@ -63,6 +63,19 @@ class SkyhookRunQuery(Engine):
             predicates = ';'.join(query.ir['selection']).replace(' ', '')
             command_args.append("--select \"{}\"".format(predicates))
 
+        if 'limit' in query.ir['options']:
+            command_args.append("--limit 0")
+        
+        # TODO: @Matthew Need a new way to represent attributes of a table in a create index 
+        # query, and still know what table to use 
+        if 'index-create' in query.ir['options']:
+            command_args.append("--index-create")        
+
+        if 'index-cols' in query.ir['options']:
+            command_args.append("--index-cols")
+            command_args.append("")
+
+
         return command_args
 
     @staticmethod
