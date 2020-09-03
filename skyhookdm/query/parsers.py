@@ -32,34 +32,31 @@ class SQLParser():
 
         def parse_clauses(tokenized):
             def parse_where_clause(tokenized):
-                allowed_ops = ('>=', '<=', '!=', '<>', '=', '>', '<', 'LIKE')
+                allowed_ops = ('>=', '<=', '!=', '<>', '=', '>', '<', 'like')
 
                 operator_strs = {allowed_ops[0] : 'geq',
-                             allowed_ops[1] : 'leq',
-                             allowed_ops[2] : 'ne',
-                             allowed_ops[3] : 'ne',
-                             allowed_ops[4] : 'eq',
-                             allowed_ops[5] : 'gt',
-                             allowed_ops[6] : 'lt',
-                             allowed_ops[7] : 'like'}
+                                 allowed_ops[1] : 'leq',
+                                 allowed_ops[2] : 'ne',
+                                 allowed_ops[3] : 'ne',
+                                 allowed_ops[4] : 'eq',
+                                 allowed_ops[5] : 'gt',
+                                 allowed_ops[6] : 'lt',
+                                 allowed_ops[7] : 'like'}
 
                 where_tokens = []
-                identifier = None
-
-                # TODO: Allow multiple WHERE predicates by converting this to a loop? 
                 for item in tokenized.tokens:
                     if isinstance(item, Where):
                         for i in item.tokens:
+                            token = []
+                            if i.ttype is Keyword and item.value.upper() == 'AND':
+                                token = [] 
                             if isinstance(i, Comparison):
-                                where_tokens.append(str(i.left))
+                                token.append(str(i.left))
                                 operation = str(i).split(" ")[1]
-                                for op in allowed_ops:
-                                    if op == operation:
-                                        where_tokens.append(operator_strs[op])
-                                        break
-                                    if op.upper() == 'LIKE':
-                                        where_tokens.append(operator_strs[op.upper()])
-                                where_tokens.append(str(i.right))
+                                if operation.lower() in allowed_ops:
+                                    token.append(operator_strs[operation.lower()])
+                                token.append(str(i.right))
+                                where_tokens.append(','.join(token))
                 return where_tokens
 
             def parse_from_clause(tokenized):
@@ -92,12 +89,6 @@ class SQLParser():
                     elif isinstance(item, Identifier):
                         yield item.get_name()
 
-            def format_ids(identifiers):
-                if len(identifiers) == 0:
-                    return ''
-                formatted_ids = ', '.join(identifiers)
-                return formatted_ids                
-
             '''
             Special case for CREATE INDEX or DESCRIBE TABLE
             '''
@@ -117,9 +108,9 @@ class SQLParser():
 
                 selection_ids = parse_where_clause(tokenized)
 
-                sqlir.set_projection(format_ids(projection_ids))
-                sqlir.set_selection(format_ids(selection_ids))
-                sqlir.set_table_name(format_ids(table_ids))
+                sqlir.set_projection(*projection_ids)
+                sqlir.set_selection(*selection_ids)
+                sqlir.set_table_name(*table_ids)
 
                 return sqlir
             else:

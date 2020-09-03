@@ -16,7 +16,7 @@ class Engine(ABC):
     def __init__(self, name, ):
         pass
 
-class SkyhookRunQuery(Engine):
+class SkyhookRunQuery():
     """An engine for building and executing Skyhook CLI commands."""
 
     @classmethod
