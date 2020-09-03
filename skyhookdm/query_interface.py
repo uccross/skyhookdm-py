@@ -9,15 +9,21 @@ def query_string(statement):
     """
     return SQLParser.parse_query(statement)
 
-def engine_options(options=None, engine=None):
+def engine_options(engine=None, options=None):
     """A function that returns an EngineOptions object
     
     Arguments:
+    engine -- A string representing the name of an engine
     options -- A dictionary of options and their values. If None, default options returned
     """
     return EngineOptions.get_options(engine, options)
 
 def dataset_options(dataset=None):
+    """A fucntion that returns a DatasetOptions object
+
+    Arguments:
+    dataset -- A string representing the name of a dataset
+    """
     return DatasetOptions.get_dataset(dataset)
 
 def run(query, engine_options, dataset_options):

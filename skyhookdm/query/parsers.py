@@ -108,7 +108,7 @@ class SQLParser():
             elif tokenized[0].ttype is Keyword and tokenized[0].value.upper() == 'DESCRIBE': # TODO: @Matthew Also check for 'TABLE'
                 sqlir.set_describe_table(format_ids(parse_identifiers(tokenized)))
                 return sqlir
-            else:
+            elif tokenized[0].ttype is DML and tokenized[0].value.upper() == 'SELECT':
                 select_stream = parse_select_clause(tokenized)
                 projection_ids = list(extract_identifiers(select_stream))
 
@@ -122,7 +122,8 @@ class SQLParser():
                 sqlir.set_table_name(format_ids(table_ids))
 
                 return sqlir
-
+            else:
+                raise SyntaxError("Query must be supprt SQL syntax (SELECT, CREATE INDEX, DESCRIBE TABLE)")
 
         sql_statement = sqlparse.split(raw_query)[0]
         

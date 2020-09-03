@@ -13,7 +13,7 @@ class Engine(ABC):
     class provides a skeleton for functionality that must be 
     supported by any engine implemented via this interface. 
     """
-    def __init__(self):
+    def __init__(self, name, ):
         pass
 
 class SkyhookRunQuery(Engine):
@@ -152,7 +152,6 @@ class DatasetOptions():
 
 class EngineOptions():
     """A class that manages the SkyhookRunQuery engine options"""
-
     skyhook_defaults = {'cls'           : True,
                         'quiet'         : False,
                         'header'        : True,
@@ -161,8 +160,10 @@ class EngineOptions():
                         'output-format' : 'SFT_CSV',
                         'program'       : '~/skyhookdm-ceph/build/bin/run-query'}
 
+    engines = {'skyhook': skyhook_defaults}
+
     @classmethod
-    def get_options(cls, engine, options=None):
+    def get_options(cls, engine=None, options=None):
         """A function that returns Skyhook Engine options 
 
         Arguments:
@@ -180,7 +181,25 @@ class EngineOptions():
         
     @staticmethod
     def _get_def_options(engine):
-        pass
+        """Gets default options for the specified engine
+
+        Arguments
+        engine -- A string representing the name of an engine
+        """
+        if engine in EngineOptions.engines:
+            return EngineOptions.engines[engine]
+        else:
+            raise ValueError(f"{engine} is not an available engine")
+
+    @staticmethod
+    def _set_def_options(engine, options):
+        opts = EngineOptions._get_def_options(engine)
+        if not EngineOptions._check(options):
+            raise ValueError(f"Invalid option in {options}")
+        defs = EngineOptions._get_def_options(engine)
+        for opt in options:
+            defs[opt] = options[opt]
+        return defs
 
     @staticmethod
     def _set_options(engine, options):
