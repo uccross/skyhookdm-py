@@ -174,10 +174,10 @@ class EngineOptions():
             return Options(cls.skyhook_defaults)
         elif options is None:
             return cls._get_def_options(engine)
+        elif engine is None:
+            return cls._set_options(options)
         else:
             return cls._set_def_options(engine, options)
-
-        return cls._set_options(options)
         
     @staticmethod
     def _get_def_options(engine):
@@ -187,7 +187,7 @@ class EngineOptions():
         engine -- A string representing the name of an engine
         """
         if engine in EngineOptions.engines:
-            return EngineOptions.engines[engine]
+            return Options(EngineOptions.engines[engine])
         else:
             raise ValueError(f"{engine} is not an available engine")
 
@@ -199,7 +199,7 @@ class EngineOptions():
         defs = EngineOptions._get_def_options(engine)
         for opt in options:
             defs[opt] = options[opt]
-        return defs
+        return Options(defs)
 
     @staticmethod
     def _set_options(engine, options):
@@ -211,7 +211,7 @@ class EngineOptions():
         """
         if not EngineOptions._check(options):
             raise ValueError(f"Invalid option in {options}")
-        return options
+        return Options(options)
 
     @staticmethod
     def _check(options):

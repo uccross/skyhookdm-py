@@ -3,34 +3,51 @@ import os
 import sys
 import time 
 
-from skyhookdm.query.interfaces import SQLIR
-from skyhookdm.query.engines import SkyhookRunQuery
+from skyhookdm import query_interface
+from skyhookdm.query.models import SQLIR
+from skyhookdm.query.engines import SkyhookRunQuery, EngineOptions, DatasetOptions
 from skyhookdm.query.parsers import SQLParser
 
-#### Options for test validation ####
-options_default = {'cls'            : True,
-                'quiet'            : False,
-                'header'           : True,
-                'pool'             : 'tpchdata',
-                'num-objs'         : '2',
-                'oid-prefix'       : '\"public\"',
-                'path_to_run_query': 'cd ~/skyhookdm-ceph/build/ && bin/run-query'}
+#### Truth values for option validation ####
+engine_options_default = {'cls'           : True,
+                          'quiet'         : False,
+                          'header'        : True,
+                          'start-obj'     : '0',
+                          'num-objs'      : '2',
+                          'output-format' : 'SFT_CSV',
+                          'program'       : '~/skyhookdm-ceph/build/bin/run-query'}
 
-options_quiet = {'cls'              : True,
-                'quiet'            : True,
-                'header'           : True,
-                'pool'             : 'tpchdata',
-                'num-objs'         : '2',
-                'oid-prefix'       : '\"public\"',
-                'path_to_run_query': 'cd ~/skyhookdm-ceph/build/ && bin/run-query'}
 
-options_no_cls = {'cls'             : False,
-                'quiet'            : False,
-                'header'           : True,
-                'pool'             : 'tpchdata',
-                'num-objs'         : '2',
-                'oid-prefix'       : '\"public\"',
-                'path_to_run_query': 'cd ~/skyhookdm-ceph/build/ && bin/run-query'}
+engine_options_quiet = {'cls'           : True,
+                        'quiet'         : True,
+                        'header'        : True,
+                        'start-obj'     : '0',
+                        'num-objs'      : '2',
+                        'output-format' : 'SFT_CSV',
+                        'program'       : '~/skyhookdm-ceph/build/bin/run-query'}
+
+engine_options_no_cls = {'cls'           : False,
+                        'quiet'         : False,
+                        'header'        : True,
+                        'start-obj'     : '0',
+                        'num-objs'      : '2',
+                        'output-format' : 'SFT_CSV',
+                        'program'       : '~/skyhookdm-ceph/build/bin/run-query'}
+
+dataset_options_default = {'pool'        : 'tpchdata',
+                           'table-name'  : 'lineitem',
+                           'oid-prefix'  : 'public'}
+
+### Truth values for skyhook engine commands ###
+expected_skyhook_command = ['~/skyhookdm-ceph/build/bin/run-query', 
+                            '--num-objs', '2', 
+                            '--pool', 'tpchdata', 
+                            '--oid-prefix', '"public"', 
+                            '--table-name', '"lineitem"', 
+                            '--header', 
+                            '--use-cls', 
+                            '--project "orderkey" ', 
+                            '--select "orderkey,lt,5"']
 
 
 def get_expected_value(path):
@@ -50,142 +67,135 @@ class TestInterface(unittest.TestCase):
 
     # TODO: @Matthew Test query results need to be validated. 
     #### Projection Queries ####
-    def test_a_projection_1(self):
+    def test_a_sqlir_projection_1(self):
         # Init Query Object
         q = SQLIR()
+        eo = query_interface.engine_options(engine='skyhook')
+        do = query_interface.dataset_options()
 
         # Verify default options
-        self.assertEqual(q.options, options_default)
+        self.assertEqual(eo.options, engine_options_default)
+        self.assertEqual(do.options, dataset_options_default)
 
-        q.sql("select * from lineitem")
-        q.run()
-
+        q.set_table_name('lineitem')
+        q.set_selection('')
+        
+        results = query_interface.run(q, eo, do)
         expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_a_expected.txt")
-        self.assertEqual(q.results, expected)
+        self.assertEqual(results, expected)
 
         time.sleep(5)
 
-    def test_b_projection_2_quiet(self):
-        # Init Query
-        q = SQLIR() 
-
-        q.set_option('quiet', True)
+    def test_b_sqlir_projection_2_quiet(self):
+        # Init Query and options
+        q = query_interface("select * from lineitem")
+        eo = query_interface.engine_options(engine='skyhook', options={'quiet': True})
+        do = query_interface.dataset_options()
 
         # Verify options use `quiet` setting
-        self.assertEqual(q.options, options_quiet)
+        self.assertEqual(eo, engine_options_quiet)
+        self.assertEqual(do, dataset_options_default)
 
-        q.sql("select orderkey,discount,shipdate from lineitem")
-        q.run()
-
+        results = query_interface.run(q, eo, do)
         expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_b_expected.txt")
-        self.assertEqual(q.results, expected)
+        self.assertEqual(results, expected)
 
         time.sleep(5)
     
-    def test_c_projection_3_no_cls(self):
-        q = SQLIR()
+    def test_c_sqlir_projection_3_no_cls(self):
+        # Init query and options
+        q = query_interface.query_string("select orderkey,discount,shipdate from lineitem")
+        eo = query_interface.engine_options(engine='skyhook', options={'cls': False})
+        do = query_interface.dataset_options()
         
-        q.set_option('cls', False)
-
         # Verify options do not use `cls` setting
-        self.assertEqual(q.options, options_no_cls)
+        self.assertEqual(eo, engine_options_no_cls)
+        self.assertEqual(do, dataset_options_default)
 
-        q.set_projection("orderkey,discount,shipdate")
-        q.set_table_name("lineitem")
+        expected_query = {'selection' : [],
+                          'projection': ['orderkey,discount,shipdate'], 
+                          'table-name': ['lineitem'],
+                          'attributes': [],
+                          'options'   : []}
+        self.assertEqual(q.ir, expected_query)
 
-        expected_query = {'selection'  :'',
-                          'projection' :'orderkey,discount,shipdate', 
-                          'table-name' :'lineitem'}
-        self.assertEqual(q.query, expected_query)
-
-        q.run()
-
+        results = query_interface.run(q, eo, do)
         expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_c_expected.txt")
-        self.assertEqual(q.results, expected)
+        self.assertEqual(results, expected)
 
         time.sleep(5)
     
     #### Selection Queries ####
-    def test_d_selection_1(self): 
-        # Init Query Object
-        q = SQLIR()
+    def test_d_sqlir_selection_1(self): 
+        # Init query and options
+        q = query_interface.query_string("select orderkey from lineitem where orderkey > 3")
+        eo = query_interface.engine_options()
+        do = query_interface.dataset_options()
 
         # Verify default options
-        self.assertEqual(q.options, options_default)
+        self.assertEqual(eo, engine_options_default)
+        self.assertEqual(do, dataset_options_default)
 
-        q.sql("select orderkey from lineitem where orderkey > 3")
-
-        q.run()
-
+        results = query_interface.run(q, eo, do)
         expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_d_expected.txt")
-        self.assertEqual(q.results, expected)
+        self.assertEqual(results, expected)
 
         time.sleep(5)
 
-    def test_e_selection_2_quiet(self):
-        # Init Query
-        q = SQLIR() 
+    def test_e_sqlir_selection_2_quiet(self):
+        # Init query and options
+        q = query_interface.query_string("select orderkey,tax,commitdate from lineitem where orderkey < 5")
+        eo = query_interface.engine_options(engine='skyhook', options={'quiet': True})
+        do = query_interface.dataset_options()
+        
+        # Verify options do use `quiet` setting
+        self.assertEqual(eo, engine_options_quiet)
+        self.assertEqual(do, dataset_options_default)
 
-        q.set_option('quiet', True)
+        expected_query = {'selection'  : ['gt', 'orderkey', '3'],
+                          'projection' : ['tax,orderkey'], 
+                          'table-name' : ['lineitem'],
+                          'attributes' : [],
+                          'options'    : []}
 
-        # Verify options use `quiet` setting
-        self.assertEqual(q.options, options_quiet)
+        self.assertNotEqual(q.ir, expected_query)
 
-        q.set_projection("orderkey,tax,commitdate")
-        q.set_selection("orderkey, lt, 5")
-        q.set_table_name("lineitem")
-
-        expected_query = {'selection'  :['gt', 'orderkey', '3'],
-                          'projection' :'tax,orderkey', 
-                          'table-name' :'lineitem'}
-
-        self.assertNotEqual(q.query, expected_query)
-
-        q.run()
-
+        results = query_interface.run(q, eo, do)
         expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_e_expected.txt")
-        self.assertEqual(q.results, expected)
+        self.assertEqual(results, expected)
 
         time.sleep(5)
     
-    def test_f_selection_3_no_cls(self):
-        q = SQLIR()
+    def test_f_sqlir_selection_3_no_cls(self):
+        # Init query and options
+        q = query_interface.query_string("select orderkey,tax,commitdate from lineitem where orderkey < 5")
+        eo = query_interface.engine_options(engine='skyhook', options={'cls': False})
+        do = query_interface.dataset_options()
         
-        q.set_option('cls', False)
-
         # Verify options do not use `cls` setting
-        self.assertEqual(q.options, options_no_cls)
+        self.assertEqual(eo, engine_options_no_cls)
+        self.assertEqual(do, dataset_options_default)
 
-        q.sql("SELECT * from lineitem where linenumber > 4")
-
-        q.run()
-
+        results = query_interface.run(q, eo, do)
         expected = get_expected_value(os.getcwd() + "/resources/expected-sql/query/test_f_expected.txt")
         self.assertEqual(q.results, expected)
 
         time.sleep(5)
 
-    #### Skyhook Runner ####
-    def test_g_skyhook_cmd(self):
-        q = Query()
-        q.set_selection("orderkey, gt, 3")
-        q.set_projection("shipdate,orderkey")
-        q.set_table_name("lineitem")
-        q.set_option("cls", False)
-        q.set_option("header", False)
-        q.set_option("quiet", True)
-        q.set_option("num-objs", 10)
-        q.set_option("pool", "name")
+    #### Skyhook Engine ####
+    def test_g_skyhook_engine(self):
+        q = query_interface.query_string("select orderkey from lineitem where orderkey < 5")
+        eo = query_interface.engine_options(engine='skyhook')
+        do = query_interface.dataset_options()
 
-        cmd = SkyhookRunner.create_sk_cmd(q.query, q.options)
+        command = SkyhookRunQuery.create_sk_cmd(q, eo, do)
 
-        expected = get_expected_value(os.getcwd() + "/resources/expected-sql/skyhook/test_g_expected.txt")
-        self.assertEqual(cmd, expected)
+        self.assertEqual(command, expected_skyhook_command)
 
         time.sleep(5)
 
     #### Parser ####
-    def test_h_parse_query(self):
+    def test_h_sqlparser(self):
         parsed = SQLParser.parse_query("select everything from thisTable where everything like 'nothing'")
 
         expected = get_expected_value(os.getcwd() + "/resources/expected-sql/parser/test_h_expected.txt")

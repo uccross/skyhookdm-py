@@ -3,7 +3,7 @@ class SQLIR():
 
     def __init__(self):        
         self.ir = {'selection'  : [],
-                   'projection' : [],
+                   'projection' : [], # TODO: @Matthew String with many names should be split
                    'table-name' : [],
                    'attributes' : [],
                    'options'    : []}
