@@ -94,10 +94,10 @@ class SQLParser():
             '''
             sqlir = SQLIR()
             if tokenized[0].ttype is DDL and tokenized[0].value.upper() == 'CREATE': # TODO: @Matthew Also check for 'INDEX'
-                sqlir.set_create_index(format_ids(parse_identifiers(tokenized)))
+                sqlir.set_create_index(*parse_identifiers(tokenized))
                 return sqlir
             elif tokenized[0].ttype is Keyword and tokenized[0].value.upper() == 'DESCRIBE': # TODO: @Matthew Also check for 'TABLE'
-                sqlir.set_describe_table(format_ids(parse_identifiers(tokenized)))
+                sqlir.set_describe_table(*parse_identifiers(tokenized))
                 return sqlir
             elif tokenized[0].ttype is DML and tokenized[0].value.upper() == 'SELECT':
                 select_stream = parse_select_clause(tokenized)
