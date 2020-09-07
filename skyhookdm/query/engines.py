@@ -46,6 +46,7 @@ class SkyhookRunQuery():
             '--table-name' 
         ]
 
+        # Table name from query takes precedence over dataset metadata 
         if len(query.ir['table-name']) > 0:
             command_args.append(f"\"{','.join(query.ir['table-name']).replace(' ', '')}\"")
         else:
@@ -86,7 +87,7 @@ class SkyhookRunQuery():
 
     @staticmethod
     def _execute_sk_cmd(command_args):
-        """A function that executes a Skyhook CLI command. 
+        """A function that executes Skyhook driver. 
 
         Arguments:
         command_args -- A list of arguments to be executed in which the first must be a path to Skyhook's run-query binary
@@ -124,9 +125,11 @@ class Options():
 class DatasetOptions():
     """A class that manages the metadata of a dataset"""
     
-    defaults = {'pool'        : 'tpchdata',
-                'table-name'  : 'lineitem',
-                'oid-prefix'  : 'public'}
+    defaults = {'pool'         : 'tpchdata',
+                'table-name'   : 'lineitem',
+                'oid-prefix'   : 'public',
+                'partitioning' : None,
+                'schema'       : None}
     
     @classmethod
     def get_dataset(cls, dataset=None):
@@ -145,8 +148,11 @@ class DatasetOptions():
         
     @staticmethod
     def _find_dataset(dataset):
+        '''
+        Calls skyhook_get_dataset method from underlying library
+        Returns metadata of dataset that includes partitioning and data schema
+        '''
         all_dataset_options = ('pool', 'table_name', 'oid_prefix')
-        # TODO: @Matthew Calls skyhook_get_dataset() method
         pass
         
 
@@ -158,7 +164,7 @@ class EngineOptions():
                         'start-obj'     : '0',
                         'num-objs'      : '2',
                         'output-format' : 'SFT_CSV',
-                        'program'       : '~/skyhookdm-ceph/build/bin/run-query'}
+                        'engine'        : 'run-query'}
 
     engines = {'skyhook': skyhook_defaults}
 

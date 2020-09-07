@@ -89,9 +89,7 @@ class SQLParser():
                     elif isinstance(item, Identifier):
                         yield item.get_name()
 
-            '''
-            Special case for CREATE INDEX or DESCRIBE TABLE
-            '''
+            # Determine if DDL of DML 
             sqlir = SQLIR()
             if tokenized[0].ttype is DDL and tokenized[0].value.upper() == 'CREATE': # TODO: @Matthew Also check for 'INDEX'
                 sqlir.set_create_index(*parse_identifiers(tokenized))

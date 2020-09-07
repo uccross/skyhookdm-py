@@ -14,7 +14,6 @@ class SQLIR():
         Arguments:
         args -- Any number of strings representing predicates of the form \"<operand>,<comparison>,<operand>\"
         """
-        print(args)
         if self._is_string(args):
             predicates = []
             for value in args:
