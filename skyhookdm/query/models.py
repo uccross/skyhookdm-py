@@ -3,7 +3,7 @@ class SQLIR():
 
     def __init__(self):        
         self.ir = {'selection'  : [],
-                   'projection' : [], # TODO: @Matthew String with many names should be split
+                   'projection' : [], 
                    'table-name' : [],
                    'attributes' : [],
                    'options'    : []}
@@ -54,7 +54,7 @@ class SQLIR():
         """
         if self._is_string(args):
             self.ir['options'] = ['index-create', 'index-cols']
-            self.ir['attributes'] = list(args) # TODO: @Matthew should be table attributes
+            self.ir['attributes'] = list(args) 
 
     def set_describe_table(self, *args):
         """Sets the describe table query options and table name parameter.

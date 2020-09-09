@@ -1,20 +1,6 @@
-import os
 import subprocess
-from abc import ABC, abstractmethod
 
 from .models import SQLIR
-
-class Engine(ABC):
-    """Abstract class for engine implementations.
-
-    Engines (e.g. Skyhook's Run Query) are used to transform
-    an intermediate representation of queries into commands or
-    library calls to a particular data management system. This
-    class provides a skeleton for functionality that must be 
-    supported by any engine implemented via this interface. 
-    """
-    def __init__(self, name, ):
-        pass
 
 class SkyhookRunQuery():
     """An engine for building and executing Skyhook CLI commands."""
@@ -38,7 +24,7 @@ class SkyhookRunQuery():
             raise TypeError("Dataset options must be of type Options")
 
         command_args = [
-            engine_options.options['program'],
+            engine_options.options['engine'],
             
             '--num-objs'   , engine_options.options['num-objs'],
             '--pool'       , dataset_options.options['pool'],
@@ -46,7 +32,7 @@ class SkyhookRunQuery():
             '--table-name' 
         ]
 
-        # Table name from query takes precedence over dataset metadata 
+        # Table name from query takes precedence over dataset metadata
         if len(query.ir['table-name']) > 0:
             command_args.append(f"\"{','.join(query.ir['table-name']).replace(' ', '')}\"")
         else:
@@ -72,8 +58,6 @@ class SkyhookRunQuery():
         if 'limit' in query.ir['options']:
             command_args.append("--limit 0")
         
-        # TODO: @Matthew Need a new way to represent attributes of a table in a create index 
-        # query, and still know what table to use 
         if 'index-create' in query.ir['options']:
             command_args.append("--index-create")        
 
@@ -114,7 +98,6 @@ class SkyhookRunQuery():
 class Options():
     """(Dummy) class for engine and dataset options
 
-    TODO: @Matthew
     Engines and datasets that use options to represent argument flags 
     or metadata. This abstract class implements a general procedure
     for verifying that options are allowed by an engine or dataset. 
@@ -144,7 +127,6 @@ class DatasetOptions():
             raise TypeError("Input must be a string")
         else:
             cls._find_dataset(dataset)
-            # TODO: @Matthew How to get dataset, and verify? 
         
     @staticmethod
     def _find_dataset(dataset):
@@ -204,8 +186,8 @@ class EngineOptions():
             raise ValueError(f"Invalid option in {options}")
         defs = EngineOptions._get_def_options(engine)
         for opt in options:
-            defs[opt] = options[opt]
-        return Options(defs)
+            defs.options[opt] = options[opt]
+        return defs
 
     @staticmethod
     def _set_options(engine, options):
