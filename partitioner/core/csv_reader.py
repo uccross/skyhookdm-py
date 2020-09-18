@@ -21,10 +21,15 @@ def get_keys(schema):
     # No Keys found
     if len(keys) == 1:
         return (keys[0], None)
-    else if len(keys) == 2:
+    elif len(keys) == 2:
         return (keys[0], keys[1])
     return (None, None)
 
+def get_names(schema):
+    names = []
+    for (name, _, _) in schema:
+        names.append(name)
+    return names   
 
 # Datatype codes, add on as needed. Reflects the Skyhook Metadata Wrapper
 codes = {
@@ -51,8 +56,8 @@ def enforce_datatype(df, code):
         df = df.astype(np.float16)
 
     if code == 'double':
-        # Cast the dataframe to a double (int16)
-        df = df.astype(np.int16)
+        # Cast the dataframe to a double (float64)
+        df = df.astype(np.float64)
 
     ### Lexical Values
     if code == 'char':
@@ -99,9 +104,12 @@ def generate_table(file, schema, max_bucket_size):
         print("File is blank")
         return False
 
+    # Get the names for the schema. Don't want (tuple) to be the name.
+    col_names = get_names(input_schema)
+
     try:
         # Parses the file based on the | as a separator and reads nrows, following the schema given.
-        data_skyhook = pd.read_csv(file, sep='|', nrows=nrows, names=schema, header=0, error_bad_lines=True)
+        data_skyhook = pd.read_csv(file, sep='|', nrows=nrows, names=col_names, header=0, error_bad_lines=True)
     except pd.errors.ParserError as err:
         print(err)
         return False
