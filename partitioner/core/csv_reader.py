@@ -7,17 +7,26 @@ from writer import store_bucket
 from reader import pa_dump
 from pq_writer import pq_store_bucket
 
-# Takes in a list of tuples containing the column name and datatype
+"""
+Takes in a list of tuples containing the column name
+datatype, and whether they are keys
+"""
 # Returns a list containing the possible keys for the schema
+# Assumption is the schema is ordered and there can only be at most two keys.
 def get_keys(schema):
-  keys = []
-  for (name, datatype, isKey) in schema:
-    if isKey:
-      keys.append(name)
-  return keys
+    keys = []
+    for (name, datatype, isKey) in schema:
+        if isKey:
+            keys.append(name)
+    # No Keys found
+    if len(keys) == 1:
+        return (keys[0], None)
+    else if len(keys) == 2:
+        return (keys[0], keys[1])
+    return (None, None)
 
 
-# Datatype codes, add on as needed. Reflects the Skyhook
+# Datatype codes, add on as needed. Reflects the Skyhook Metadata Wrapper
 codes = {
     0: 'int32',
     1: 'float',
@@ -105,8 +114,10 @@ def generate_table(file, schema, max_bucket_size):
         col = df[[column]] # make it a dataframe by encasing another []
         # enforce Datatype on the Dataframe
         new = enforce_datatype(col, datatype)
+        # Replace the column with the casted version
+        df[[column]] = new
 
     # Convert the Pandas dataframe to an Arrow Table
-    table = pa.Table.from_pandas(new)
-
-    return True
+    table = pa.Table.from_pandas(df)
+    # Return the converted table
+    return table

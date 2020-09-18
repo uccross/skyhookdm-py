@@ -37,3 +37,8 @@ def store_row_partitions(buckets, table, dir=None, max_rows=-1):
     for oid in buckets.keys():
         files[oid].close()
     return
+
+def store_col_partitions(table, dir=None):
+    pass
+    
+    
