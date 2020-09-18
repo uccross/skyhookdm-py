@@ -108,7 +108,7 @@ def generate_table(file, schema, max_bucket_size):
     col_names = get_names(input_schema)
 
     try:
-        # Parses the file based on the | as a separator and reads nrows, following the schema given.
+        # Parses the file using | as a separator and reads nrows, following the schema given.
         data_skyhook = pd.read_csv(file, sep='|', nrows=nrows, names=col_names, header=0, error_bad_lines=True)
     except pd.errors.ParserError as err:
         print(err)

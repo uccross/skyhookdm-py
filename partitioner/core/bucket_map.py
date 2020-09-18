@@ -2,7 +2,7 @@ from hash import gen_hashbucket
 
 # Takes a PyArrow Table and extracts their values into a list
 def get_key_list(table, key):
-     if pk:
+     if key:
         pkey = table.column(key)
         return pkey
     return None
@@ -24,6 +24,10 @@ def row_map(table, pk1, num_buckets, max_rows,  pk2=None):
     if key2 is None:
         isSingle = True
     
+    # Trivial Edge Case
+    if max_rows > len(key1):
+        max_rows = len(key1) # Avoid out of bounds error
+
     # Create a holder for the buckets using a dictionary
     for row in range(0, max_rows):
         if isSingle:

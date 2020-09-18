@@ -3,9 +3,11 @@ import os
 # Given a bucket and PyArrow Table, write the data to DISC/Local Memory.
 # Optional: Specify an existing directory
 
+# TODOs
 # Add Bucket Flush
+# Add Rados support
 # Add compatibility with PyArrow Writer
-# Redo this using PyArrow's I/O
+# Redo this using PyArrow's I/O (unsupported/not developed)
 
 def store_row_partitions(buckets, table, dir=None, max_rows=-1):
     # Opens a file for writing only. Overwrites the file if the file exists.
@@ -38,7 +40,7 @@ def store_row_partitions(buckets, table, dir=None, max_rows=-1):
         files[oid].close()
     return
 
+# Debating whether to change the row function to work for both, or make a new one.
 def store_col_partitions(table, dir=None):
     pass
-    
     

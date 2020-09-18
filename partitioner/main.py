@@ -10,7 +10,7 @@ from core.csv_reader import generate_table
 # Set up variables for the read_csv to match a schema
 # Returns true if successful, otherwise returns false
 # Takes in an input file, bucket_size, number of objects, rows to read from file, and storage directory (or pool)
-""" Sample Input Schema for refference 
+""" Sample Input Schema for reference 
 input_schema = [('ORDERKEY', 'int32', 1), ('PARTKEY', 'int32', 0),
                  ('SUPPKEY', 'int32', 0), ('LINENUMBER', 'int32', 1),
                  ('QUANTITY', 'float', 0),('EXTENDEDPRICE', 'double', 0),
@@ -24,10 +24,12 @@ def pq_etl(type, file, input_schema, max_bucket_size, num_buckets, nrows=100, di
 
     key1, key2 = get_keys(input_schema)
     if (key1 is None) and (key2 is None):
-        raise("Invalid, Schema contains no keys")
+        print("Invalid, Schema contains no keys")
+        return False
+
+    # Returns a PyArrow Table following the specs provided in the schema
     table = generate_table(file, input_schema, nrows)
-    if len(keys) == 0:
-        
+
     # Map the function
     if type = 'row':
         # Pick a maximum size for a bucket
@@ -40,8 +42,6 @@ def pq_etl(type, file, input_schema, max_bucket_size, num_buckets, nrows=100, di
         raise("Feature not Implemented")
         # Direct store of 1:1, each column goes in one bucket. No mapping required
         #store_col_partitions(table=table, dir=directory)
-
-
 
     # Print the file to check contents
     # pa_dump(buckets=mapping, dir=directory)
