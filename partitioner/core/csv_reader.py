@@ -2,10 +2,6 @@ import os
 # Performs an ETL on a csv file to write into skyhook as a pyarrow table.
 import pyarrow as pa
 import pandas as pd
-from bucket_map import row_map, show_map
-from writer import store_bucket
-from reader import pa_dump
-from pq_writer import pq_store_bucket
 
 """
 Takes in a list of tuples containing the column name
@@ -43,8 +39,9 @@ codes = {
 def enforce_datatype(df, code):
 
     # If it's a supported datatype
-    if code in codes.values():
-    # Sloppy logic, could be improved in the future.
+    if code not in codes.values():
+        raise("The datatype you are looking for is currently not supported")
+
     ### Numeric values
     if code == 'int32':
         # Cast the dataframe to an int32

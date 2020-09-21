@@ -1,8 +1,8 @@
-from hash import gen_hashbucket
+from core.hash import gen_hashbucket
 
 # Takes a PyArrow Table and extracts their values into a list
 def get_key_list(table, key):
-     if key:
+    if key:
         pkey = table.column(key)
         return pkey
     return None
