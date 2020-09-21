@@ -18,27 +18,18 @@ def init_test(directory):
     return
 
 # Currently works well with Files that Exist. Empty Buckets aka blank files should be ignored.
-def test_gen(file, schema, nrows, bucket_size, num_buckets, calc_dir, expect_dir):
+def test_gen(type, file, schema, nrows, bucket_size, num_buckets, calc_dir, expect_dir):
     # Initialize the local storage
     init_test(calc_dir)
     # Call CSV Reader-like and populate calc directory
-    pq_etl(file, schema, bucket_size, num_buckets, nrows, calc_dir)
-    pq_etl(file, schema, bucket_size, num_buckets, nrows, expect_dir)
+    pq_etl(type, file, schema, bucket_size, num_buckets, nrows, calc_dir)
+    pq_etl(type, file, schema, bucket_size, num_buckets, nrows, expect_dir)
     # Based on KNOWN outputs
 
     # TEST 1: Compare Arrow Binaries on Disk 
     # Compare Computed Arrow Binaries on Disk with Expected Arrow Binary
     print("Compare Bucket 0 on Disk:", comp_files(calc_dir, expect_dir, "bin-Object-0"))
     print("Compare Bucket 1 on Disk:", comp_files(calc_dir, expect_dir, "bin-Object-1"))
-
-    data_skyhook = pd.read_csv(file, sep='|', nrows=nrows, names=schema, header=0)
-    df = pd.DataFrame(data_skyhook)
-    table = pa.Table.from_pandas(df)
-    nrows = table.num_rows
-    mapping = row_map(data=data_skyhook, pk1="ORDERKEY", pk2="LINENUMBER", num_buckets=2, max_rows=nrows, max_size=bucket_size)
-
-    # Convert the Pandas dataframe to an Arrow Table
-    table = pa.Table.from_pandas(df)
 
     # TEST 2: Compare Logical Contents of Arrow Tables as DataFrames
     # Compare Computed Dataframe with Expected Dataframe
@@ -48,9 +39,9 @@ def test_gen(file, schema, nrows, bucket_size, num_buckets, calc_dir, expect_dir
     return True
 
 # Checks that if a csv is empty, no files should be created.
-def test_errors(file, schema, nrows, bucket_size, num_buckets, calc_dir, expect_dir):
+def test_errors(type, file, schema, nrows, bucket_size, num_buckets, calc_dir, expect_dir):
     init_test(calc_dir)
-    check = pq_etl(file, schema, bucket_size, num_buckets, nrows, calc_dir)
+    check = pq_etl(type, file, schema, bucket_size, num_buckets, nrows, calc_dir)
     if check is False:
         return True # Passed the Test
     else:
@@ -59,13 +50,14 @@ def test_errors(file, schema, nrows, bucket_size, num_buckets, calc_dir, expect_
 # A trivial test to check if two binaries are the same.
 def comp_files(dir1, dir2, filename):
     # Given a file with the same name, and the locations of both.
+    # Get the paths of the two files.
     owd = os.getcwd()
     path1 = (owd + '/' + dir1 + '/' + filename)
     path2 = (owd + '/' + dir2 + '/' + filename)
 
     # print("Comparing", path1, "with", path2)
 
-    # Get the paths of the two files.
+    # Return whether or not they contain the safe info
     return filecmp.cmp(path1, path2)
 
 
@@ -131,7 +123,7 @@ schema = ['ORDERKEY', 'PARTKEY', 'SUPPKEY', 'LINENUMBER', 'QUANTITY',
        'EXTENDEDPRICE', 'DISCOUNT', 'TAX', 'RETURNFLAG', 'LINESTATUS',
        'SHIPDATE', 'COMMITDATE', 'RECEIPTDATE', 'SHIPINSTRUCT', 'SHIPMODE',
        'COMMENT']
-       
+partition = 'row'
 ## Add Changes to Datatype to infer the correct type with Skyhook's metadta
 # df['ORDERKEY'].astype('int')
    # ... #
@@ -146,31 +138,31 @@ rows_to_read = 100
 
 # Tests on an empty file
 print("Test case 4: Empty file")
-test_errors(test_files[1], schema, rows_to_read, values[0], bucket_limit, target, test)
+test_errors(partition, test_files[1], schema, rows_to_read, values[0], bucket_limit, target, test)
 
 # Test on non-file
 print("Test case 5: Invalid file type")
-test_errors(test_files[2], schema, rows_to_read, values[0], bucket_limit, target, test)
+test_errors(partition, test_files[2], schema, rows_to_read, values[0], bucket_limit, target, test)
 
 # Test on missing file
 print("Test case 6: File doesn't exist")
-test_errors(test_files[3], schema, rows_to_read, values[0], bucket_limit, target, test)
+test_errors(partition, test_files[3], schema, rows_to_read, values[0], bucket_limit, target, test)
 
 # If CSV Has error don't write anything.
 print("Test case 6: File is not a valid csv")
-test_errors(test_files[4], schema, rows_to_read, values[0], bucket_limit, target, test) 
+test_errors(partition, test_files[4], schema, rows_to_read, values[0], bucket_limit, target, test) 
 
 # Test with No Flush
 print("Test case 1: Normal file, with no flushing")
-test_gen(test_files[0], schema, rows_to_read, values[2], bucket_limit, target, test)
+test_gen(partition, test_files[0], schema, rows_to_read, values[2], bucket_limit, target, test)
 
 # Test With Flush
 print("Test case 2: Normal file, with flushing")
-test_gen(test_files[0], schema, rows_to_read, values[1], bucket_limit, target, test)
+test_gen(partition, test_files[0], schema, rows_to_read, values[1], bucket_limit, target, test)
 
 print("Test case 3: Normal file, with empty buckets.")
 # Test: Schema where an empty bucket exists. TODO IMPROVEMENTS. Cannot read from empty file.
-test_gen(test_files[0], schema, rows_to_read, values[0], bucket_limit, target, test)
+test_gen(partition, test_files[0], schema, rows_to_read, values[0], bucket_limit, target, test)
 
 
 
