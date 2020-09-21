@@ -7,23 +7,10 @@ import pandas as pd
 Takes in a list of tuples containing the column name
 datatype, and whether they are keys
 """
-# Returns a list containing the possible keys for the schema
-# Assumption is the schema is ordered and there can only be at most two keys.
-def get_keys(schema):
-    keys = []
-    for (name, datatype, isKey) in schema:
-        if isKey:
-            keys.append(name)
-    # No Keys found
-    if len(keys) == 1:
-        return (keys[0], None)
-    elif len(keys) == 2:
-        return (keys[0], keys[1])
-    return (None, None)
 
 def get_names(schema):
     names = []
-    for (name, _, _) in schema:
+    for (name, _,) in schema:
         names.append(name)
     return names   
 
@@ -80,7 +67,7 @@ def enforce_datatype(df, code):
 
 # Set up variables for the read_csv to match a schema
 # Returns a PyArrow Table following the datatypes
-def generate_table_row(file, schema, max_bucket_size):
+def generate_table_(file, schema, max_bucket_size):
 
     # Error Handling
     if not os.path.exists(file):
@@ -126,52 +113,3 @@ def generate_table_row(file, schema, max_bucket_size):
     table = pa.Table.from_pandas(df)
     # Return the converted table
     return table
-
-# Contrary to the row version, this generates a list of tables following the datatype.
-def generate_table_col(file, schema, max_bucket_size):
-
-    # Error Handling
-    if not os.path.exists(file):
-        # Raise Error for File not Found
-        print("File not Found")
-        return False
-
-    if not os.path.isfile(file):
-        # Raise Error for Invalid type
-        print("File specified is not a file")
-        return False
-
-    if os.stat(file).st_size == 0:
-        # Raise Error for empty csv
-        # raise ValueError('Empty File') # This ends all tests when I raise error.
-
-        # Want to print error to console and return False.
-        print("File is blank")
-        return False
-
-    # Get the names for the schema. Don't want (tuple) to be the name.
-    col_names = get_names(input_schema)
-
-    try:
-        # Parses the file using | as a separator and reads nrows, following the schema given.
-        data_skyhook = pd.read_csv(file, sep='|', nrows=nrows, names=col_names, header=0, error_bad_lines=True)
-    except pd.errors.ParserError as err:
-        print(err)
-        return False
-
-    # Load the Data into a pandas dataframe
-    df = pd.DataFrame(data_skyhook)
-    columns = []    
-
-    # Cast dataframe to match desired Skyhook Schema
-    for (column, datatype, _) in schema:
-        col = df[[column]] # make it a dataframe by encasing another []
-        # enforce Datatype on the Dataframe
-        new = enforce_datatype(col, datatype)
-        # Convert the Pandas dataframe to an Arrow Table
-        table = pa.Table.from_pandas(new)
-         # Add the casted version to the list of columns
-        columns.append(table)
-
-    # Return the list of tables
-    return columns
