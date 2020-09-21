@@ -42,8 +42,12 @@ def pq_etl(type, file, input_schema, max_bucket_size, num_buckets, nrows=100, di
     if type is 'col':
         for i, name in enumerate(table.column_names):
             # Get the column
-            table = table.select(name)
+            names = []
+            names.append(name)
+            new = table.select(names)
             # Store the column into a location
-            store_col_partitions(table, 'Object-' + i, dir=directory)
+            store_col_partitions(new, 'Object-' + i, dir=directory)
+            names.clear()
+
 
     return True
