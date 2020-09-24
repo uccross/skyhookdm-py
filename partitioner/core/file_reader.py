@@ -116,14 +116,16 @@ def generate_table_(file, schema, max_bucket_size):
         print("File Type is not supported")
         return False
 
-    # No Datatypes specified
-    if schema is None:
-        return data_skyhook
-
-    # Otherwise cast according to the schema
     # Load the Data into a pandas dataframe
     df = pd.DataFrame(data_skyhook)
 
+    # No Datatypes specified
+    if schema is None:
+        # Convert to a table
+        table = pa.Table.from_pandas(df)
+        return table
+
+    # Otherwise cast according to the schema
     # Cast dataframe to match desired Skyhook Schema
     for (column, datatype) in schema:
         col = df[[column]] # make it a dataframe by encasing another []
