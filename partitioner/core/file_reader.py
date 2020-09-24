@@ -23,6 +23,7 @@ codes = {
     4: 'string',
     5: 'date'
 }
+
 def enforce_datatype(df, code):
 
     # If it's a supported datatype
@@ -89,20 +90,42 @@ def generate_table_(file, schema, max_bucket_size):
         return False
 
     # Get the names for the schema. Don't want (tuple) to be the name.
-    col_names = get_names(input_schema)
+    col_names = get_names(schema)
 
-    try:
-        # Parses the file using | as a separator and reads nrows, following the schema given.
-        data_skyhook = pd.read_csv(file, sep='|', nrows=nrows, names=col_names, header=0, error_bad_lines=True)
-    except pd.errors.ParserError as err:
-        print(err)
+    # Check if the file is a json, csv, or unsupported
+    extension = os.path.splitext(file)[1][1:]
+    print(extension)
+    if extension is 'json':
+        try:
+            # Parses the file using | as a separator and reads nrows, following the schema given.
+            data_skyhook = pd.read_json(file, sep='|', nrows=nrows, names=col_names, header=0, error_bad_lines=True)
+        except pd.errors.ParserError as err:
+            print(err)
+            return False
+
+    if extension is 'csv':
+        try:
+            # Parses the file using | as a separator and reads nrows, following the schema given.
+            data_skyhook = pd.read_csv(file, sep='|', nrows=nrows, names=col_names, header=0, error_bad_lines=True)
+        except pd.errors.ParserError as err:
+            print(err)
+            return False
+
+    # Unsupported
+    if extension is not 'json' and extension is not 'csv':
+        print("File Type is not supported")
         return False
 
+    # No Datatypes specified
+    if schema is None:
+        return data_skyhook
+
+    # Otherwise cast according to the schema
     # Load the Data into a pandas dataframe
     df = pd.DataFrame(data_skyhook)
 
     # Cast dataframe to match desired Skyhook Schema
-    for (column, datatype, _) in schema:
+    for (column, datatype) in schema:
         col = df[[column]] # make it a dataframe by encasing another []
         # enforce Datatype on the Dataframe
         new = enforce_datatype(col, datatype)

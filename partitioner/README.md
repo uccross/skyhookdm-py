@@ -6,8 +6,8 @@ Currently it is stored to disc.
 Features
 - Row Based Partitions
 - Column Based Partitions
+- Support for JSON files
 
 Future
 - Range based Partioning
-- Support for JSON files
 - Fixed Range i.e Datetime partitioning

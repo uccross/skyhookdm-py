@@ -4,7 +4,7 @@ import pyarrow as pa
 import pandas as pd
 from core.bucket_map import row_map, show_map
 from core.writer import store_row_partitions, store_col_partitions
-from core.csv_reader import generate_table
+from core.file_reader import generate_table
 '''
 This is an optimized version for users running PyArrow 1.0.0 or higher.
 '''
