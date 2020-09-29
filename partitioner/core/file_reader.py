@@ -60,15 +60,15 @@ def enforce_datatype(df, code):
         df = df.astype(str)
 
     if code == 'date':
-        # default date is PST
-        df = df.astype('datetime64[ns, US/Pacific]')
+        # default date is UTC
+        df = df.astype('datetime64[ns]')
 
     # Return back the casted dataframe
     return df
 
 # Set up variables for the read_csv to match a schema
 # Returns a PyArrow Table following the datatypes
-def generate_table_(file, schema, max_bucket_size):
+def generate_table(file, schema, max_bucket_size):
 
     # Error Handling
     if not os.path.exists(file):

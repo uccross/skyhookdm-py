@@ -50,6 +50,27 @@ def row_map(table, pk1, num_buckets, max_rows,  pk2=None):
     # Return the bucket
     return buckets
 
+# Given at at Exactly ONE Column containing a datetime column
+# Generates a dictionary mapping of every object based on the YYYY-MM format.
+def range_map(table, date_column):
+    buckets = {}
+    key = get_key_list(table, date_column)
+    for row, date in enumerate(key):
+        # Extract the YYYY-MM to use as the Bucket_ID
+        pandas_dt = pd.to_datetime(date.value, unit='ns')
+        bucket_id = str(pandas_dt.to_period('M'))
+        buckets[bucket_id] = row
+        # Append the value to the existing list
+        if bucket_id in buckets:
+            # print("Append")
+            buckets[bucket_id].append(row)
+        else:
+            # Create and Store in Bucket if item doesn't exist
+            # print("Create")
+            bucket_list = []
+            bucket_list.append(row)
+            buckets[bucket_id] = bucket_list
+
 # Testing function
 def show_map(buckets):
     print(buckets.keys())

@@ -2,7 +2,7 @@ import os
 # Performs an ETL on a csv file to write into skyhook as a pyarrow table.
 import pyarrow as pa
 import pandas as pd
-from core.bucket_map import row_map, show_map
+from core.bucket_map import row_map, show_map, range_map
 from core.writer import store_row_partitions, store_col_partitions
 from core.file_reader import generate_table
 '''
@@ -34,6 +34,19 @@ def skyhook_partitioner(type, table, max_partition_size, npartitions, nrows=100,
         # Change function to work for PyArrow Tables not Dataframes.
         mapping = row_map(data=table, pk1=key1, pk2=key2, num_buckets=npartitions, max_rows=nrows)
         # Store buckets according to the mappings.
+        store_row_partitions(buckets=mapping, table=table, max_size=max_partition_size, dir=storage)
+
+    if type is 'range':
+        if (key1 is None) and (key2 is None):
+            print("Invalid, Schema contains no keys")
+        return False
+        # Range is fixed to Dates (Months) only
+        # The column to partition on must be a datetime type
+
+        # Creates a mapping based on the column given having the same value. No hashing done.
+        # Want values of the same kind to be stored in the same bucket.
+        mapping = range_map(table, key1)
+        # Storage of the range is still row based, each row goes in its a bucket where the YYYY-MM Format matches
         store_row_partitions(buckets=mapping, table=table, max_size=max_partition_size, dir=storage)
 
     if type is 'col':
